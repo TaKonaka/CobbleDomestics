@@ -1,0 +1,23 @@
+# Pedido / IDE
+cobblemon-main/
+.vscode/
+.cursor/
+.eclipse/
+.idea/
+*.iml
+
+# Build / runtime
+.gradle/
+build/
+bin/
+run/
+out/
+
+# Referencia Cobblemon local (no es el mod)
+com/
+.cobblemon-src/
+
+# OS
+.DS_Store
+Thumbs.db
+*.log

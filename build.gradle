@@ -1,0 +1,66 @@
+plugins {
+    id 'eclipse'
+    id 'net.neoforged.moddev' version '2.0.141'
+}
+
+version = '1.0'
+base.archivesName = "cobbledomestics"
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = "21.1.232"
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        cobbledomestics {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+repositories {
+    maven {
+        name = "ImpactDev"
+        url = "https://maven.impactdev.net/repository/development/"
+    }
+    maven {
+        name = "KotlinForForge"
+        url = "https://thedarkcolour.github.io/KotlinForForge/"
+    }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = "https://api.modrinth.com/maven"
+            }
+        }
+        filter {
+            includeGroup "maven.modrinth"
+        }
+    }
+}
+
+dependencies {
+    // Runtime mods live in run/mods (Cobblemon + Kotlin for Forge 5.12).
+    // Using implementation here would load a second copy and crash JarInJar / mixins.
+    compileOnly "com.cobblemon:neoforge:1.8.0+1.21.1"
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib:2.1.20"
+}

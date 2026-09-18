@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "cobbledomestics.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "refmap": "cobbledomestics.refmap.json",
+	"client": [
+    "PokemonRendererMixin",
+    "PokemonOnShoulderRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

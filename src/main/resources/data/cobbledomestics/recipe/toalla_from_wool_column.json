@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "group": "cobbledomestics:toalla",
+  "pattern": [
+    "W",
+    "W",
+    "W"
+  ],
+  "key": {
+    "W": {
+      "tag": "minecraft:wool"
+    }
+  },
+  "result": {
+    "id": "cobbledomestics:toalla"
+  }
+}
