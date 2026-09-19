@@ -1,0 +1,15 @@
+{
+  "type": "cobblemon:cooking_pot",
+  "group": "cobbledomestics:haba_basic",
+  "category": "misc",
+  "key": {
+    "S": { "item": "minecraft:sugar" },
+    "H": { "item": "minecraft:honey_bottle" },
+    "A": { "item": "cobblemon:lum_berry" },
+    "B": { "item": "cobblemon:babiri_berry" }
+  },
+  "pattern": ["SHS", "ABA"],
+  "result": { "id": "cobbledomestics:basic_green" },
+  "seasoningTag": "cobblemon:empty",
+  "seasoningProcessors": []
+}
