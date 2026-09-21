@@ -116,7 +116,7 @@ public final class AffectionHandler {
 	private static void applyReward(ServerPlayer player, PokemonEntity pokemonEntity, Pokemon pokemon, int reward) {
 		if (AffectionData.isWild(pokemon)) {
 			AffectionData.addConfianza(pokemon, reward);
-			if (AffectionData.getConfianza(pokemon) >= AffectionData.MAX_CONFIANZA) {
+			if (AffectionData.getConfianza(pokemon) >= AffectionData.getLvCaptura(pokemon)) {
 				JoinTeamHandler.offerJoin(player, pokemonEntity);
 			}
 		} else if (reward > 0) {

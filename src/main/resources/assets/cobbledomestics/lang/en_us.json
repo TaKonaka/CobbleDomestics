@@ -19,7 +19,7 @@
   "itemGroup.cobbledomestics": "CobbleDomestics",
   "message.cobbledomestics.haba.full": "%s is too full to eat that.",
   "message.cobbledomestics.haba.fed_wild": "%s ate it! +%s trust",
-  "message.cobbledomestics.haba.fed_owned": "%s ate it!",
+  "message.cobbledomestics.haba.fed_owned": "%s ate it! +%s friendship",
   "message.cobbledomestics.bath.not_owner": "This Pokémon is not yours.",
   "message.cobbledomestics.bath.not_dirty": "%s is not dirty.",
   "message.cobbledomestics.bath.already_soapy": "%s is already fully soapy or wet.",

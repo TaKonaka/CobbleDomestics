@@ -69,14 +69,15 @@ public final class HabaHandler {
 		boolean typeMatch = tier.hasTypeBonus() && habaItem.getColor() != null && habaItem.getColor().matches(pokemon);
 		int amistad = tier.baseAmistad() + (typeMatch ? tier.extraAmistad() : 0);
 		int confianza = tier.baseConfianza() + (typeMatch ? tier.extraConfianza() : 0);
+		boolean wild = AffectionData.isWild(pokemon);
 
-		if (amistad > 0) {
+		if (!wild && amistad > 0) {
 			pokemon.incrementFriendship(amistad, true);
 		}
 
-		if (AffectionData.isWild(pokemon) && confianza > 0) {
+		if (wild && confianza > 0) {
 			AffectionData.addConfianza(pokemon, confianza);
-			if (AffectionData.getConfianza(pokemon) >= AffectionData.MAX_CONFIANZA) {
+			if (AffectionData.getConfianza(pokemon) >= AffectionData.getLvCaptura(pokemon)) {
 				JoinTeamHandler.offerJoin(player, pokemonEntity);
 			}
 		}
@@ -84,7 +85,7 @@ public final class HabaHandler {
 		pokemon.feedPokemon(cost, true);
 		stack.consume(1, player);
 
-		if (AffectionData.isWild(pokemon)) {
+		if (wild) {
 			player.displayClientMessage(Component.translatable(
 					"message.cobbledomestics.haba.fed_wild",
 					pokemon.getDisplayName(true),
@@ -92,7 +93,8 @@ public final class HabaHandler {
 		} else {
 			player.displayClientMessage(Component.translatable(
 					"message.cobbledomestics.haba.fed_owned",
-					pokemon.getDisplayName(true)), true);
+					pokemon.getDisplayName(true),
+					amistad), true);
 		}
 
 		playSuccess(pokemonEntity);
