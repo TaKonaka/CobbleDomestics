@@ -93,8 +93,7 @@ public final class HabaHandler {
 		} else {
 			player.displayClientMessage(Component.translatable(
 					"message.cobbledomestics.haba.fed_owned",
-					pokemon.getDisplayName(true),
-					amistad), true);
+					pokemon.getDisplayName(true)), true);
 		}
 
 		playSuccess(pokemonEntity);
