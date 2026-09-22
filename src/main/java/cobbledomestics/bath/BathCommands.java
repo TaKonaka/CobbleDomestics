@@ -41,7 +41,7 @@ public final class BathCommands {
 				.then(Commands.literal("HumorReset")
 						.executes(BathCommands::resetHumor))
 				.then(Commands.literal("ConfianzaSet")
-						.then(Commands.argument("valor", IntegerArgumentType.integer(0, AffectionData.MAX_CONFIANZA))
+						.then(Commands.argument("valor", IntegerArgumentType.integer(0, Integer.MAX_VALUE / 4))
 								.executes(BathCommands::setConfianza)))
 				.then(Commands.literal("Animation")
 						.then(Commands.argument("animaciones", StringArgumentType.greedyString())

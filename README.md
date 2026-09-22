@@ -245,7 +245,7 @@ Raíz: `/cobbledomestics`
 /cobbledomestics suciedad <valor:0..5>
 /cobbledomestics estado
 /cobbledomestics HumorReset
-/cobbledomestics ConfianzaSet <valor:0..50>
+/cobbledomestics ConfianzaSet <valor:0..LvCaptura>
 /cobbledomestics Animation <nombres…>
 ```
 
@@ -254,7 +254,7 @@ Target: Pokémon más cercano en un AABB proyectado 8 bloques en la dirección d
 - `suciedad`: `setSuciedad`; si `valor > 0` fuerza `jabonoso=0`, `mojado=0`, estado `SUCIO`; si `0`, `clearBath`.
 - `estado`: `syncState` y reporta `STATE | suciedad | jabonoso | mojado | humor | confianza`.
 - `HumorReset`: pone humor en `DEFAULT_HUMOR` (10).
-- `ConfianzaSet`: solo salvajes; fija confianza en `0..50`.
+- `ConfianzaSet`: solo salvajes; fija confianza en `0..LvCaptura` (el parser acepta un rango amplio y `setConfianza` clampea al umbral del Pokémon).
 
 ---
 
@@ -304,7 +304,25 @@ En el mismo compound `cobbledomestics` del NBT persistente:
 | Key | Rango | Quién |
 |---|---|---|
 | `humor` | 0–10 (default 10 si ausente) | todos |
-| `confianza` | 0–50 (default 0) | solo salvajes (`ownerUUID == null`) |
+| `confianza` | 0–`LvCaptura` (default 0) | solo salvajes (`ownerUUID == null`) |
+
+#### LvCaptura (umbral de domesticación)
+
+El valor de confianza necesario para que un salvaje ofrezca unirse al equipo es dinámico por Pokémon:
+
+```
+LvCaptura = (LVPkm × Empacho) / 2
+```
+
+| Variable | Origen |
+|---|---|
+| `LVPkm` | `pokemon.getLevel()` |
+| `Empacho` | `pokemon.getMaxFullness()` (saciedad máxima de Cobblemon) |
+| `LvCaptura` | `max(1, (nivel × maxFullness) / 2)` — división entera |
+
+API: `AffectionData.getLvCaptura(pokemon)`. `getConfianza` / `setConfianza` clampean a ese máximo.
+
+Los salvajes **no usan Amistad** de Cobblemon: Caricia/Abrazo/Haba solo suman Confianza. La Amistad aplica a Pokémon capturados (dueño).
 
 Cada **1200 ticks** (~1 min): `humor += 1` (cap 10) en party online y en `PokemonEntity` salvajes del mundo.
 
@@ -320,16 +338,18 @@ Iconos: `textures/gui/interact/caricia.png`, `abrazo.png`. Acción C2S: `Affecti
 | Acción | Humor | Extra | Salvaje | Capturado |
 |---|---|---|---|---|
 | Caricia | −3 | — | +rand(2–5) Confianza | +rand(2–5) Amistad |
-| Abrazo | −4 | salvaje: Confianza > 25 | +rand(5–15) Confianza | +rand(5–15) Amistad |
+| Abrazo | −4 | salvaje: Confianza > `LvCaptura / 2` | +rand(5–15) Confianza | +rand(5–15) Amistad |
 
 Fallos: action bar + partículas `angry_villager`. Éxito: partículas `heart`. El baño **ignora** Shift para no chocar con el wheel.
 
+Haba en salvaje: solo Confianza (sin Amistad ni texto de amistad en el action bar). Haba en dueño: Amistad.
+
 ### Unirse al equipo (confianza máxima)
 
-Cuando un salvaje llega a **confianza 50** con la última Caricia/Abrazo (o ya está al máximo y se le vuelve a acariciar/abrazar tras un rechazo), el servidor envía `JoinOfferPacket` y el cliente abre `JoinOfferScreen`:
+Cuando un salvaje llega a **confianza ≥ `LvCaptura`** con la última Caricia/Abrazo/Haba (o ya está al máximo y se le vuelve a acariciar/abrazar/alimentar tras un rechazo), el servidor envía `JoinOfferPacket` y el cliente abre `JoinOfferScreen`:
 
 - Mensaje: `%s quiere unirse a tu equipo`
 - **Aceptar:** busca una `PokeBallItem` (mano principal → offhand → inventario), la asigna como `caughtBall`, añade con `party.add` (overflow a PC de Cobblemon) y despawnea la entidad. Si no hay ball: mensaje `join.no_ball` y se reabre la oferta.
-- **Rechazar:** cierra la UI; la confianza se mantiene en 50. La próxima interacción exitosa vuelve a ofrecer.
+- **Rechazar:** cierra la UI; la confianza se mantiene en `LvCaptura`. La próxima interacción exitosa vuelve a ofrecer.
 
 Packets: S2C `join_offer`, C2S `join_offer_response`.

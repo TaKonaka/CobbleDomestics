@@ -13,11 +13,9 @@ import net.minecraft.util.RandomSource;
 public final class AffectionData {
 	public static final int MAX_HUMOR = 10;
 	public static final int DEFAULT_HUMOR = 10;
-	public static final int MAX_CONFIANZA = 50;
 	public static final int DEFAULT_CONFIANZA = 0;
 	public static final int CARICIA_HUMOR_COST = 3;
 	public static final int ABRAZO_HUMOR_COST = 4;
-	public static final int ABRAZO_CONFIANZA_REQUIRED = 25;
 	public static final int CARICIA_REWARD_MIN = 2;
 	public static final int CARICIA_REWARD_MAX = 5;
 	public static final int ABRAZO_REWARD_MIN = 5;
@@ -42,6 +40,17 @@ public final class AffectionData {
 
 	public static boolean isWild(Pokemon pokemon) {
 		return pokemon.getOwnerUUID() == null;
+	}
+
+	/**
+	 * Dynamic join threshold: {@code (level × maxFullness) / 2}, minimum 1.
+	 */
+	public static int getLvCaptura(Pokemon pokemon) {
+		return Math.max(1, (pokemon.getLevel() * pokemon.getMaxFullness()) / 2);
+	}
+
+	public static int getAbrazoConfianzaRequired(Pokemon pokemon) {
+		return getLvCaptura(pokemon) / 2;
 	}
 
 	public static int getHumor(Pokemon pokemon) {
@@ -80,14 +89,14 @@ public final class AffectionData {
 		if (!data.contains(CONFIANZA)) {
 			return DEFAULT_CONFIANZA;
 		}
-		return clamp(data.getInt(CONFIANZA), 0, MAX_CONFIANZA);
+		return clamp(data.getInt(CONFIANZA), 0, getLvCaptura(pokemon));
 	}
 
 	public static void setConfianza(Pokemon pokemon, int value) {
 		if (!isWild(pokemon)) {
 			return;
 		}
-		tag(pokemon).putInt(CONFIANZA, clamp(value, 0, MAX_CONFIANZA));
+		tag(pokemon).putInt(CONFIANZA, clamp(value, 0, getLvCaptura(pokemon)));
 	}
 
 	public static void addConfianza(Pokemon pokemon, int amount) {
@@ -106,7 +115,7 @@ public final class AffectionData {
 	}
 
 	public static boolean canAbrazoConfianza(Pokemon pokemon) {
-		return !isWild(pokemon) || getConfianza(pokemon) > ABRAZO_CONFIANZA_REQUIRED;
+		return !isWild(pokemon) || getConfianza(pokemon) > getAbrazoConfianzaRequired(pokemon);
 	}
 
 	public static boolean isOwnedBy(Pokemon pokemon, UUID playerId) {

@@ -1,6 +1,6 @@
 package cobbledomestics.haba;
 
-import java.util.Set;
+import java.util.List;
 
 import com.cobblemon.mod.common.api.types.ElementalType;
 import com.cobblemon.mod.common.api.types.ElementalTypes;
@@ -15,10 +15,14 @@ public enum HabaColor {
 	BLUE(ElementalTypes.WATER, ElementalTypes.POISON),
 	YELLOW(ElementalTypes.ELECTRIC, ElementalTypes.GROUND);
 
-	private final Set<ElementalType> matchingTypes;
+	private final List<ElementalType> matchingTypes;
 
 	HabaColor(ElementalType... types) {
-		this.matchingTypes = Set.of(types);
+		this.matchingTypes = List.of(types);
+	}
+
+	public List<ElementalType> matchingTypes() {
+		return matchingTypes;
 	}
 
 	public boolean matches(Pokemon pokemon) {

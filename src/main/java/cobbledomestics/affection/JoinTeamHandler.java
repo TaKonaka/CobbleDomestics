@@ -26,7 +26,7 @@ public final class JoinTeamHandler {
 		if (!AffectionData.isWild(pokemon)) {
 			return;
 		}
-		if (AffectionData.getConfianza(pokemon) < AffectionData.MAX_CONFIANZA) {
+		if (AffectionData.getConfianza(pokemon) < AffectionData.getLvCaptura(pokemon)) {
 			return;
 		}
 		PacketDistributor.sendToPlayer(player, new JoinOfferPacket(pokemonEntity.getUUID(), pokemon.getDisplayName(true).getString()));
@@ -79,7 +79,7 @@ public final class JoinTeamHandler {
 		if (!AffectionData.isWild(pokemon)) {
 			return null;
 		}
-		if (AffectionData.getConfianza(pokemon) < AffectionData.MAX_CONFIANZA) {
+		if (AffectionData.getConfianza(pokemon) < AffectionData.getLvCaptura(pokemon)) {
 			return null;
 		}
 		return pokemonEntity;

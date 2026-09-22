@@ -1,0 +1,16 @@
+{
+  "type": "cobblemon:cooking_pot",
+  "group": "cobbledomestics:haba_iris",
+  "category": "misc",
+  "key": {
+    "S": { "item": "minecraft:sugar" },
+    "H": { "item": "minecraft:honey_bottle" },
+    "A": { "item": "cobblemon:cheri_berry" },
+    "B": { "item": "cobblemon:leppa_berry" },
+    "C": { "item": "cobbledomestics:basic_red" }
+  },
+  "pattern": ["SHS", "ABA", "CCC"],
+  "result": { "id": "cobbledomestics:iris_red" },
+  "seasoningTag": "cobblemon:empty",
+  "seasoningProcessors": []
+}

@@ -2,8 +2,8 @@ package cobbledomestics.haba;
 
 public enum HabaTier {
 	BASIC(3, 2, 5, 3, 1),
-	IRIS(10, 10, 15, 5, 2),
-	RAINBOW(125, 30, 0, 0, 3);
+	IRIS(10, 15, 15, 5, 2),
+	RAINBOW(80, 50, 0, 0, 3);
 
 	private final int baseAmistad;
 	private final int baseConfianza;
