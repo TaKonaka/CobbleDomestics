@@ -11,6 +11,7 @@ public final class CobbleDomesticsModParticleTypes {
 	public static final DeferredRegister<ParticleType<?>> REGISTRY = DeferredRegister.create(BuiltInRegistries.PARTICLE_TYPE, CobbleDomesticsMod.MODID);
 
 	public static final DeferredHolder<ParticleType<?>, SimpleParticleType> SOAP_BUBBLE = REGISTRY.register("soap_bubble", () -> new SimpleParticleType(false));
+	public static final DeferredHolder<ParticleType<?>, SimpleParticleType> NOTA = REGISTRY.register("nota", () -> new SimpleParticleType(false));
 
 	private CobbleDomesticsModParticleTypes() {
 	}

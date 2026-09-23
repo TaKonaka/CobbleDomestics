@@ -6,11 +6,16 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import cobbledomestics.affection.network.AffectionActionPacket;
 import cobbledomestics.affection.network.JoinOfferPacket;
 import cobbledomestics.affection.network.JoinOfferResponsePacket;
+import cobbledomestics.affection.network.RubAttackPacket;
+import cobbledomestics.affection.network.RubEndPacket;
+import cobbledomestics.affection.network.RubHintPacket;
+import cobbledomestics.affection.network.RubPokePacket;
+import cobbledomestics.affection.network.RubTickPacket;
 import cobbledomestics.bath.BathHandler;
 import cobbledomestics.init.CobbleDomesticsModItems;
+import cobbledomestics.init.CobbleDomesticsModSounds;
 import cobbledomestics.init.CobbleDomesticsModTabs;
 import cobbledomestics.particle.CobbleDomesticsModParticleTypes;
 import net.minecraft.network.FriendlyByteBuf;
@@ -38,8 +43,13 @@ public class CobbleDomesticsMod {
 		CobbleDomesticsModItems.REGISTRY.register(modEventBus);
 		CobbleDomesticsModTabs.register(modEventBus);
 		CobbleDomesticsModParticleTypes.REGISTRY.register(modEventBus);
+		CobbleDomesticsModSounds.REGISTRY.register(modEventBus);
 		BathHandler.registerCobblemonEvents();
-		AffectionActionPacket.register();
+		RubTickPacket.register();
+		RubEndPacket.register();
+		RubHintPacket.register();
+		RubPokePacket.register();
+		RubAttackPacket.register();
 		JoinOfferPacket.register();
 		JoinOfferResponsePacket.register();
 	}

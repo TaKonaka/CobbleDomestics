@@ -1,0 +1,18 @@
+{
+  "massage": {
+    "sounds": [
+      {
+        "name": "cobbledomestics:massage",
+        "stream": false
+      }
+    ]
+  },
+  "golpe": {
+    "sounds": [
+      {
+        "name": "cobbledomestics:golpe",
+        "stream": false
+      }
+    ]
+  }
+}

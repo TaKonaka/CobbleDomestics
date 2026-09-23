@@ -1,162 +1,167 @@
 package cobbledomestics.affection;
 
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.util.PlayerExtensionsKt;
 
 import cobbledomestics.CobbleDomesticsMod;
+import cobbledomestics.affection.network.RubAttackPacket;
+import cobbledomestics.affection.network.RubHintPacket;
 import cobbledomestics.animation.InteractionAnimations;
+import cobbledomestics.init.CobbleDomesticsModSounds;
+import cobbledomestics.particle.CobbleDomesticsModParticleTypes;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 @EventBusSubscriber(modid = CobbleDomesticsMod.MODID)
 public final class AffectionHandler {
-	private static final double MAX_INTERACT_DISTANCE = 8.0;
-	private static final String[] HUMOR_FAIL_KEYS = {
-			"message.cobbledomestics.affection.humor.fail.0",
-			"message.cobbledomestics.affection.humor.fail.1",
-			"message.cobbledomestics.affection.humor.fail.2",
-			"message.cobbledomestics.affection.humor.fail.3",
-			"message.cobbledomestics.affection.humor.fail.4",
-			"message.cobbledomestics.affection.humor.fail.5",
-			"message.cobbledomestics.affection.humor.fail.6",
-			"message.cobbledomestics.affection.humor.fail.7"
-	};
-	private static final String[] CONFIANZA_FAIL_KEYS = {
-			"message.cobbledomestics.affection.confianza.fail.0",
-			"message.cobbledomestics.affection.confianza.fail.1",
-			"message.cobbledomestics.affection.confianza.fail.2",
-			"message.cobbledomestics.affection.confianza.fail.3"
-	};
+	private static final double MAX_INTERACT_DISTANCE = 2.0;
+	private static final int NOTE_THROTTLE_TICKS = 20;
+	private static final int HINT_THROTTLE_TICKS = 2;
+
+	private static final Map<UUID, RubSession> SESSIONS = new ConcurrentHashMap<>();
+
+	private record RubSession(UUID targetEntityId, int progress, int idealTicks, int noteCooldown, int hintCooldown) {
+	}
 
 	private AffectionHandler() {
 	}
 
-	/**
-	 * For non-owners (wild or someone else's Pokémon), cancel Shift+use so Cobblemon
-	 * does not mount/ride; the client opens the affection-only Interact Wheel instead.
-	 */
-	@SubscribeEvent
-	public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
-		if (event.getLevel().isClientSide()) {
+	public static void handleRubTick(ServerPlayer player, UUID pokemonEntityId, int rubSpeed) {
+		PokemonEntity pokemonEntity = resolvePokemon(player, pokemonEntityId);
+		if (pokemonEntity == null) {
+			clearSession(player);
 			return;
 		}
-		if (event.getHand() != InteractionHand.MAIN_HAND) {
-			return;
-		}
-		if (!event.getEntity().isShiftKeyDown()) {
-			return;
-		}
-		if (!(event.getTarget() instanceof PokemonEntity pokemonEntity)) {
-			return;
-		}
+
+		int speed = Math.max(AffectionData.RUB_SPEED_MIN, Math.min(AffectionData.RUB_SPEED_MAX, rubSpeed));
 		Pokemon pokemon = pokemonEntity.getPokemon();
-		if (AffectionData.isOwnedBy(pokemon, event.getEntity().getUUID())) {
+		AffectionData.ensureGustos(pokemon, player.getRandom());
+
+		RubSession session = SESSIONS.get(player.getUUID());
+		if (session == null || !pokemonEntityId.equals(session.targetEntityId())) {
+			session = new RubSession(pokemonEntityId, 0, 0, 0, 0);
+		}
+
+		int noteCooldown = Math.max(0, session.noteCooldown() - 1);
+		int hintCooldown = Math.max(0, session.hintCooldown() - 1);
+		int required = AffectionData.getActiveGustoSpeed(pokemon);
+		RubHint hint = AffectionData.getRubHint(speed, required);
+
+		if (hintCooldown <= 0) {
+			PacketDistributor.sendToPlayer(player, new RubHintPacket(hint));
+			hintCooldown = HINT_THROTTLE_TICKS;
+		}
+
+		if (!AffectionData.matchesGustoSpeed(speed, required)) {
+			SESSIONS.put(player.getUUID(), new RubSession(pokemonEntityId, 0, 0, noteCooldown, hintCooldown));
 			return;
 		}
-		event.setCanceled(true);
-		event.setCancellationResult(InteractionResult.SUCCESS);
+
+		int idealTicks = session.idealTicks() + 1;
+		int progress = session.progress();
+		if (idealTicks >= AffectionData.RUB_PROGRESS_INTERVAL_TICKS) {
+			idealTicks = 0;
+			progress = Math.min(AffectionData.RUB_PROGRESS_MAX, progress + 1);
+		}
+
+		if (progress < AffectionData.RUB_PROGRESS_MAX) {
+			SESSIONS.put(player.getUUID(), new RubSession(pokemonEntityId, progress, idealTicks, noteCooldown, hintCooldown));
+			return;
+		}
+
+		if (AffectionData.getHumor(pokemon) < AffectionData.RUB_HUMOR_COST) {
+			if (noteCooldown <= 0) {
+				playLowHumor(pokemonEntity);
+				noteCooldown = NOTE_THROTTLE_TICKS;
+			}
+			SESSIONS.put(player.getUUID(), new RubSession(pokemonEntityId, 0, 0, noteCooldown, hintCooldown));
+			return;
+		}
+
+		if (!AffectionData.trySpendHumor(pokemon, AffectionData.RUB_HUMOR_COST)) {
+			SESSIONS.put(player.getUUID(), new RubSession(pokemonEntityId, 0, 0, noteCooldown, hintCooldown));
+			return;
+		}
+
+		applyReward(player, pokemonEntity, pokemon);
+		playSuccess(pokemonEntity);
+		AffectionData.advanceGustoAfterSuccess(pokemon, player.getRandom());
+		// Reset progress counter after a successful pet so the next caricia starts from 0.
+		clearSession(player);
 	}
 
-	public static void handleAction(ServerPlayer player, UUID pokemonEntityId, AffectionAction action) {
+	public static void handleRubEnd(ServerPlayer player) {
+		clearSession(player);
+	}
+
+	public static void handleRubPoke(ServerPlayer player, UUID pokemonEntityId) {
+		PokemonEntity pokemonEntity = resolvePokemon(player, pokemonEntityId);
+		if (pokemonEntity == null) {
+			return;
+		}
+		clearSession(player);
+		InteractionAnimations.playOnPokemon(pokemonEntity, "cry");
+		if (pokemonEntity.level() instanceof ServerLevel serverLevel) {
+			serverLevel.playSound(null, pokemonEntity.getX(), pokemonEntity.getY(), pokemonEntity.getZ(),
+					CobbleDomesticsModSounds.GOLPE.get(), SoundSource.NEUTRAL, 0.9F, 1.0F);
+		}
+		PacketDistributor.sendToPlayer(player, new RubAttackPacket());
+	}
+
+	private static PokemonEntity resolvePokemon(ServerPlayer player, UUID pokemonEntityId) {
 		Entity entity = player.serverLevel().getEntity(pokemonEntityId);
 		if (!(entity instanceof PokemonEntity pokemonEntity)) {
-			return;
+			return null;
 		}
 		if (player.distanceTo(pokemonEntity) > MAX_INTERACT_DISTANCE) {
-			return;
+			return null;
 		}
 		if (pokemonEntity.isBattling()) {
-			return;
+			return null;
 		}
-
-		Pokemon pokemon = pokemonEntity.getPokemon();
-		switch (action) {
-			case CARICIA -> tryCaricia(player, pokemonEntity, pokemon);
-			case ABRAZO -> tryAbrazo(player, pokemonEntity, pokemon);
-		}
+		return pokemonEntity;
 	}
 
-	private static void tryCaricia(ServerPlayer player, PokemonEntity pokemonEntity, Pokemon pokemon) {
-		if (!AffectionData.trySpendHumor(pokemon, AffectionData.CARICIA_HUMOR_COST)) {
-			failHumor(player, pokemonEntity, pokemon);
-			return;
-		}
-		int reward = AffectionData.rollCariciaReward(player.getRandom());
-		applyReward(player, pokemonEntity, pokemon, reward);
-		playSuccess(pokemonEntity);
+	private static void clearSession(ServerPlayer player) {
+		SESSIONS.remove(player.getUUID());
 	}
 
-	private static void tryAbrazo(ServerPlayer player, PokemonEntity pokemonEntity, Pokemon pokemon) {
-		if (!AffectionData.canAbrazoConfianza(pokemon)) {
-			failConfianza(player, pokemonEntity, pokemon);
-			return;
-		}
-		if (!AffectionData.trySpendHumor(pokemon, AffectionData.ABRAZO_HUMOR_COST)) {
-			failHumor(player, pokemonEntity, pokemon);
-			return;
-		}
-		int reward = AffectionData.rollAbrazoReward(player.getRandom());
-		applyReward(player, pokemonEntity, pokemon, reward);
-		playSuccess(pokemonEntity);
-	}
-
-	private static void applyReward(ServerPlayer player, PokemonEntity pokemonEntity, Pokemon pokemon, int reward) {
+	private static void applyReward(ServerPlayer player, PokemonEntity pokemonEntity, Pokemon pokemon) {
 		if (AffectionData.isWild(pokemon)) {
-			AffectionData.addConfianza(pokemon, reward);
+			AffectionData.addConfianza(pokemon, AffectionData.RUB_CONFIANZA_REWARD);
 			if (AffectionData.getConfianza(pokemon) >= AffectionData.getLvCaptura(pokemon)) {
 				JoinTeamHandler.offerJoin(player, pokemonEntity);
 			}
-		} else if (reward > 0) {
-			pokemon.incrementFriendship(reward, true);
+		} else {
+			pokemon.incrementFriendship(AffectionData.RUB_FRIENDSHIP_REWARD, true);
 		}
-	}
-
-	private static void failHumor(ServerPlayer player, PokemonEntity pokemonEntity, Pokemon pokemon) {
-		String key = HUMOR_FAIL_KEYS[player.getRandom().nextInt(HUMOR_FAIL_KEYS.length)];
-		tell(player, Component.translatable(key, name(pokemon)));
-		playFail(pokemonEntity);
-	}
-
-	private static void failConfianza(ServerPlayer player, PokemonEntity pokemonEntity, Pokemon pokemon) {
-		String key = CONFIANZA_FAIL_KEYS[player.getRandom().nextInt(CONFIANZA_FAIL_KEYS.length)];
-		tell(player, Component.translatable(key, name(pokemon)));
-		playFail(pokemonEntity);
 	}
 
 	private static void playSuccess(PokemonEntity entity) {
 		if (entity.level() instanceof ServerLevel serverLevel) {
 			serverLevel.sendParticles(ParticleTypes.HEART, entity.getX(), entity.getY() + entity.getBbHeight() * 0.5, entity.getZ(), 10, 0.45, 0.35, 0.45, 0.02);
+			serverLevel.playSound(null, entity.getX(), entity.getY(), entity.getZ(), CobbleDomesticsModSounds.MASSAGE.get(), SoundSource.NEUTRAL, 0.7F, 1.0F);
 		}
 		InteractionAnimations.playOnPokemon(entity, "cry");
 	}
 
-	private static void playFail(PokemonEntity entity) {
+	private static void playLowHumor(PokemonEntity entity) {
 		if (entity.level() instanceof ServerLevel serverLevel) {
-			serverLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER, entity.getX(), entity.getY() + entity.getBbHeight() * 0.5, entity.getZ(), 8, 0.35, 0.3, 0.35, 0.02);
+			serverLevel.sendParticles(CobbleDomesticsModParticleTypes.NOTA.get(), entity.getX(), entity.getY() + entity.getBbHeight() * 0.5, entity.getZ(), 6, 0.35, 0.25, 0.35, 0.0);
+			serverLevel.playSound(null, entity.getX(), entity.getY(), entity.getZ(), CobbleDomesticsModSounds.MASSAGE.get(), SoundSource.NEUTRAL, 0.7F, 1.0F);
 		}
-	}
-
-	private static void tell(Player player, Component message) {
-		if (!player.level().isClientSide) {
-			player.displayClientMessage(message, true);
-		}
-	}
-
-	private static Component name(Pokemon pokemon) {
-		return pokemon.getDisplayName(true);
 	}
 
 	@SubscribeEvent
