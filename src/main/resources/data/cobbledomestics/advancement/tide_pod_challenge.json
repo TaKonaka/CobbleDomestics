@@ -1,0 +1,29 @@
+{
+  "display": {
+    "icon": {
+      "id": "cobbledomestics:soap"
+    },
+    "title": {
+      "translate": "advancements.cobbledomestics.tide_pod_challenge.title"
+    },
+    "description": {
+      "translate": "advancements.cobbledomestics.tide_pod_challenge.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "minecraft:adventure/root",
+  "criteria": {
+    "eat_soap": {
+      "trigger": "minecraft:consume_item",
+      "conditions": {
+        "item": {
+          "items": "cobbledomestics:soap"
+        }
+      }
+    }
+  },
+  "requirements": [["eat_soap"]]
+}

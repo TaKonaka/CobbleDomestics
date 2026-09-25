@@ -1,130 +1,128 @@
 package cobbledomestics.client;
 
-import java.util.UUID;
-
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
-import com.cobblemon.mod.common.pokemon.Pokemon;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
 
 import cobbledomestics.CobbleDomesticsMod;
-import cobbledomestics.affection.AffectionAction;
-import cobbledomestics.affection.AffectionData;
-import cobbledomestics.affection.network.AffectionActionPacket;
-import kotlin.Unit;
+import cobbledomestics.affection.RubHint;
+import cobbledomestics.bath.BathItems;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 
-import com.cobblemon.mod.common.api.Priority;
-import com.cobblemon.mod.common.api.events.CobblemonEvents;
-import com.cobblemon.mod.common.api.events.pokemon.interaction.PokemonInteractionGUICreationEvent;
-import com.cobblemon.mod.common.client.gui.interact.wheel.InteractWheelGUI;
-import com.cobblemon.mod.common.client.gui.interact.wheel.InteractWheelOption;
-import com.cobblemon.mod.common.client.gui.interact.wheel.Orientation;
-
+/**
+ * Toggle immersive care (mimos / bath) with the remappable action key when looking at a Pokémon.
+ */
 @EventBusSubscriber(modid = CobbleDomesticsMod.MODID, value = Dist.CLIENT)
 public final class AffectionClient {
-	private static final ResourceLocation CARICIA_ICON = ResourceLocation.fromNamespaceAndPath(CobbleDomesticsMod.MODID, "textures/gui/interact/caricia.png");
-	private static final ResourceLocation ABRAZO_ICON = ResourceLocation.fromNamespaceAndPath(CobbleDomesticsMod.MODID, "textures/gui/interact/abrazo.png");
-	private static boolean cobblemonHooked;
+	private static final double MAX_INTERACT_DISTANCE = 2.0;
+	/** Blocks re-entering immersive immediately after exit (mouse-bound keys stay "down"). */
+	private static final int REOPEN_COOLDOWN_TICKS = 12;
+	private static boolean rubKeyWasDown;
+	private static int reopenCooldown;
 
 	private AffectionClient() {
 	}
 
-	public static void ensureCobblemonHook() {
-		if (cobblemonHooked) {
-			return;
+	public static void applyRubHint(RubHint hint) {
+		if (Minecraft.getInstance().screen instanceof ImmersiveInteractScreen immersive) {
+			immersive.applyRubHint(hint);
 		}
-		cobblemonHooked = true;
-		CobblemonEvents.POKEMON_INTERACTION_GUI_CREATION.subscribe(Priority.NORMAL, event -> {
-			addAffectionOptions(event);
-			return Unit.INSTANCE;
-		});
 	}
 
-	private static void addAffectionOptions(PokemonInteractionGUICreationEvent event) {
-		UUID pokemonId = event.getPokemonID();
-		event.addFillingOption(cariciaOption(pokemonId));
-		event.addFillingOption(abrazoOption(pokemonId));
+	public static void beginAttackPause() {
+		if (Minecraft.getInstance().screen instanceof ImmersiveInteractScreen immersive) {
+			immersive.beginAttackPause();
+		}
 	}
 
-	public static void openAffectionOnlyWheel(UUID pokemonEntityId) {
-		Multimap<Orientation, InteractWheelOption> options = ArrayListMultimap.create();
-		options.put(Orientation.NORTH, cariciaOption(pokemonEntityId));
-		options.put(Orientation.NORTHEAST, abrazoOption(pokemonEntityId));
-		Minecraft.getInstance().setScreen(new InteractWheelGUI(options, Component.translatable("cobbledomestics.ui.interact.pokemon")));
+	public static void onImmersiveClosed() {
+		rubKeyWasDown = true;
+		reopenCooldown = REOPEN_COOLDOWN_TICKS;
 	}
 
-	private static InteractWheelOption cariciaOption(UUID pokemonEntityId) {
-		return new InteractWheelOption(
-				CARICIA_ICON,
-				null,
-				true,
-				"cobbledomestics.ui.interact.caricia",
-				() -> null,
-				() -> {
-					sendAction(pokemonEntityId, AffectionAction.CARICIA);
-					return Unit.INSTANCE;
-				});
+	public static void consumeRubToggle() {
+		rubKeyWasDown = true;
+		reopenCooldown = REOPEN_COOLDOWN_TICKS;
 	}
 
-	private static InteractWheelOption abrazoOption(UUID pokemonEntityId) {
-		return new InteractWheelOption(
-				ABRAZO_ICON,
-				null,
-				true,
-				"cobbledomestics.ui.interact.abrazo",
-				() -> null,
-				() -> {
-					sendAction(pokemonEntityId, AffectionAction.ABRAZO);
-					return Unit.INSTANCE;
-				});
-	}
-
-	private static void sendAction(UUID pokemonEntityId, AffectionAction action) {
-		PacketDistributor.sendToServer(new AffectionActionPacket(pokemonEntityId, action));
-		Minecraft.getInstance().setScreen(null);
+	public static boolean isImmersiveOpen() {
+		return Minecraft.getInstance().screen instanceof ImmersiveInteractScreen;
 	}
 
 	@SubscribeEvent
-	public static void onClientStart(ClientPlayerNetworkEvent.LoggingIn event) {
-		ensureCobblemonHook();
+	public static void onClientTick(ClientTickEvent.Post event) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player == null || mc.level == null) {
+			rubKeyWasDown = false;
+			reopenCooldown = 0;
+			return;
+		}
+
+		if (reopenCooldown > 0) {
+			reopenCooldown--;
+		}
+
+		boolean keyDown = CobbleDomesticsKeyMappings.RUB.isDown();
+		boolean pressed = keyDown && !rubKeyWasDown;
+		rubKeyWasDown = keyDown;
+
+		if (!pressed) {
+			return;
+		}
+
+		if (mc.screen instanceof ImmersiveInteractScreen) {
+			// Screen handles stop / exit via key/mouse; do not reopen here.
+			return;
+		}
+
+		if (mc.screen != null) {
+			return;
+		}
+
+		if (reopenCooldown > 0) {
+			return;
+		}
+
+		PokemonEntity target = findLookedPokemon(mc);
+		if (target == null) {
+			return;
+		}
+
+		ItemStack held = mc.player.getMainHandItem();
+		if (held.isEmpty() || BathItems.isBathInteractItem(held)) {
+			rubKeyWasDown = true;
+			mc.setScreen(new ImmersiveInteractScreen(target.getUUID()));
+		}
 	}
 
-	/**
-	 * Cobblemon only opens the native wheel for the owner. For wild / non-owned Pokémon,
-	 * open an affection-only InteractWheel on Shift + right-click.
-	 */
 	@SubscribeEvent
-	public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
-		if (!event.getLevel().isClientSide()) {
-			return;
+	public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.screen instanceof ImmersiveInteractScreen) {
+			mc.setScreen(null);
 		}
-		if (event.getHand() != InteractionHand.MAIN_HAND) {
-			return;
+		rubKeyWasDown = false;
+	}
+
+	private static PokemonEntity findLookedPokemon(Minecraft mc) {
+		HitResult hit = mc.hitResult;
+		if (!(hit instanceof EntityHitResult entityHit) || hit.getType() != HitResult.Type.ENTITY) {
+			return null;
 		}
-		if (!event.getEntity().isShiftKeyDown()) {
-			return;
+		Entity entity = entityHit.getEntity();
+		if (!(entity instanceof PokemonEntity pokemonEntity)) {
+			return null;
 		}
-		if (!(event.getTarget() instanceof PokemonEntity pokemonEntity)) {
-			return;
+		if (mc.player != null && mc.player.distanceTo(pokemonEntity) > MAX_INTERACT_DISTANCE) {
+			return null;
 		}
-		Pokemon pokemon = pokemonEntity.getPokemon();
-		if (AffectionData.isOwnedBy(pokemon, event.getEntity().getUUID())) {
-			return;
-		}
-		ensureCobblemonHook();
-		openAffectionOnlyWheel(pokemonEntity.getUUID());
-		event.setCanceled(true);
-		event.setCancellationResult(InteractionResult.SUCCESS);
+		return pokemonEntity;
 	}
 }

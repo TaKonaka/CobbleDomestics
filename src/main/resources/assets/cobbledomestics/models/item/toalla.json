@@ -1,6 +1,14 @@
 {
   "parent": "item/generated",
   "textures": {
-    "layer0": "cobbledomestics:item/toalla"
-  }
+    "layer0": "cobbledomestics:item/rollo"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "damaged": 1
+      },
+      "model": "cobbledomestics:item/toalla_used"
+    }
+  ]
 }

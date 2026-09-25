@@ -1,0 +1,145 @@
+{
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "particle": "cobbledomestics:block/soap_block",
+    "soap": "cobbledomestics:block/soap_block"
+  },
+  "elements": [
+    {
+      "from": [
+        8.5,
+        0,
+        3
+      ],
+      "to": [
+        13.5,
+        4,
+        7
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            4.44444,
+            2.22222,
+            8,
+            4
+          ],
+          "texture": "#soap"
+        },
+        "east": {
+          "uv": [
+            0,
+            2.22222,
+            4.44444,
+            4
+          ],
+          "texture": "#soap"
+        },
+        "south": {
+          "uv": [
+            12.44444,
+            2.22222,
+            16,
+            4
+          ],
+          "texture": "#soap"
+        },
+        "west": {
+          "uv": [
+            8,
+            2.22222,
+            12.44444,
+            4
+          ],
+          "texture": "#soap"
+        },
+        "up": {
+          "uv": [
+            8,
+            2.22222,
+            4.44444,
+            0
+          ],
+          "texture": "#soap"
+        },
+        "down": {
+          "uv": [
+            11.55556,
+            0,
+            8,
+            2.22222
+          ],
+          "texture": "#soap"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        0,
+        1.5
+      ],
+      "to": [
+        6,
+        4,
+        6.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            4.44444,
+            14.22222,
+            8,
+            16
+          ],
+          "texture": "#soap"
+        },
+        "east": {
+          "uv": [
+            0,
+            14.22222,
+            4.44444,
+            16
+          ],
+          "texture": "#soap"
+        },
+        "south": {
+          "uv": [
+            12.44444,
+            14.22222,
+            16,
+            16
+          ],
+          "texture": "#soap"
+        },
+        "west": {
+          "uv": [
+            8,
+            14.22222,
+            12.44444,
+            16
+          ],
+          "texture": "#soap"
+        },
+        "up": {
+          "uv": [
+            8,
+            14.22222,
+            4.44444,
+            12
+          ],
+          "texture": "#soap"
+        },
+        "down": {
+          "uv": [
+            11.55556,
+            12,
+            8,
+            14.22222
+          ],
+          "texture": "#soap"
+        }
+      }
+    }
+  ]
+}

@@ -18,6 +18,7 @@ public final class CobbleDomesticsModTabs {
 			.displayItems((params, output) -> {
 				output.accept(CobbleDomesticsModItems.SOAP.get());
 				output.accept(CobbleDomesticsModItems.TOALLA.get());
+				output.accept(CobbleDomesticsModItems.PIPETA.get());
 				output.accept(CobbleDomesticsModItems.BASIC_RED.get());
 				output.accept(CobbleDomesticsModItems.BASIC_PURPLE.get());
 				output.accept(CobbleDomesticsModItems.BASIC_ORANGE.get());

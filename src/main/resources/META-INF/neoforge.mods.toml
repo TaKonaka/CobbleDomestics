@@ -1,12 +1,14 @@
 modLoader="javafml"
 loaderVersion="[4,)"
-license="Not specified"
+license="Apache-2.0"
 
 [[mods]]
 modId="cobbledomestics"
 version="1.0.0"
 displayName="CobbleDomestics"
-authors="CuteLess"
+authors="Konaka"
+description='''Hygiene, affection, and domestication for Cobblemon.'''
+logoFile="logo.png"
 
 [[mixins]]
 config = "cobbledomestics.mixins.json"

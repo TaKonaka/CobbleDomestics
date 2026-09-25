@@ -1,0 +1,68 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:alternatives",
+          "children": [
+            {
+              "type": "minecraft:item",
+              "name": "cobbledomestics:soap",
+              "conditions": [
+                {
+                  "condition": "minecraft:block_state_property",
+                  "block": "cobbledomestics:soap_block",
+                  "properties": { "soaps": "4" }
+                }
+              ],
+              "functions": [
+                { "function": "minecraft:set_count", "count": 4 },
+                { "function": "minecraft:explosion_decay" }
+              ]
+            },
+            {
+              "type": "minecraft:item",
+              "name": "cobbledomestics:soap",
+              "conditions": [
+                {
+                  "condition": "minecraft:block_state_property",
+                  "block": "cobbledomestics:soap_block",
+                  "properties": { "soaps": "3" }
+                }
+              ],
+              "functions": [
+                { "function": "minecraft:set_count", "count": 3 },
+                { "function": "minecraft:explosion_decay" }
+              ]
+            },
+            {
+              "type": "minecraft:item",
+              "name": "cobbledomestics:soap",
+              "conditions": [
+                {
+                  "condition": "minecraft:block_state_property",
+                  "block": "cobbledomestics:soap_block",
+                  "properties": { "soaps": "2" }
+                }
+              ],
+              "functions": [
+                { "function": "minecraft:set_count", "count": 2 },
+                { "function": "minecraft:explosion_decay" }
+              ]
+            },
+            {
+              "type": "minecraft:item",
+              "name": "cobbledomestics:soap",
+              "functions": [
+                { "function": "minecraft:set_count", "count": 1 },
+                { "function": "minecraft:explosion_decay" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

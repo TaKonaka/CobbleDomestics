@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "cobblemon:poke_ball"
+    },
+    "title": {
+      "translate": "advancements.cobbledomestics.new_partner.title"
+    },
+    "description": {
+      "translate": "advancements.cobbledomestics.new_partner.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "minecraft:adventure/root",
+  "criteria": {
+    "join_by_trust": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [["join_by_trust"]]
+}

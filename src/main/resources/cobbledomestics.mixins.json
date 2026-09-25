@@ -6,7 +6,8 @@
   "refmap": "cobbledomestics.refmap.json",
 	"client": [
     "PokemonRendererMixin",
-    "PokemonOnShoulderRendererMixin"
+    "PokemonOnShoulderRendererMixin",
+    "StatWidgetMixin"
   ],
   "injectors": {
     "defaultRequire": 1

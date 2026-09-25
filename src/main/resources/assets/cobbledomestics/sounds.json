@@ -1,0 +1,90 @@
+{
+  "massage": {
+    "sounds": [
+      {
+        "name": "cobbledomestics:massage",
+        "stream": false
+      }
+    ]
+  },
+  "golpe": {
+    "sounds": [
+      {
+        "name": "cobbledomestics:golpe",
+        "stream": false
+      }
+    ]
+  },
+  "relax_enter": {
+    "sounds": [
+      {
+        "name": "cobbledomestics:relax_enter",
+        "stream": false
+      }
+    ]
+  },
+  "pipeta": {
+    "sounds": [
+      {
+        "name": "cobbledomestics:pipeta",
+        "stream": false
+      }
+    ]
+  },
+  "bubble": {
+    "sounds": [
+      {
+        "name": "cobbledomestics:bubble",
+        "stream": false
+      }
+    ]
+  },
+  "bath_success": {
+    "sounds": [
+      {
+        "name": "cobbledomestics:bath_success",
+        "stream": false
+      }
+    ]
+  },
+  "team_join": {
+    "sounds": [
+      {
+        "name": "cobbledomestics:team_join",
+        "stream": false
+      }
+    ]
+  },
+  "hand_correct": {
+    "sounds": [
+      {
+        "name": "cobbledomestics:hand_correct",
+        "stream": false
+      }
+    ]
+  },
+  "hand_incorrect": {
+    "sounds": [
+      {
+        "name": "cobbledomestics:hand_incorrect",
+        "stream": false
+      }
+    ]
+  },
+  "soap_scrub": {
+    "sounds": [
+      {
+        "name": "cobbledomestics:soap_scrub",
+        "stream": false
+      }
+    ]
+  },
+  "towel_scrub": {
+    "sounds": [
+      {
+        "name": "cobbledomestics:towel_scrub",
+        "stream": false
+      }
+    ]
+  }
+}

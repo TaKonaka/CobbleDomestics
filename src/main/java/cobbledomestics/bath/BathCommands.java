@@ -1,7 +1,9 @@
 package cobbledomestics.bath;
 
+import com.cobblemon.mod.common.api.pokemon.status.Statuses;
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import com.cobblemon.mod.common.pokemon.Pokemon;
+import com.cobblemon.mod.common.pokemon.status.PersistentStatus;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -14,6 +16,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -32,7 +35,7 @@ public final class BathCommands {
 
 	private static LiteralArgumentBuilder<CommandSourceStack> buildRoot(String name) {
 		return Commands.literal(name)
-				.requires(source -> source.hasPermission(2))
+				.requires(source -> source.getEntity() instanceof Player player && player.isCreative())
 				.then(Commands.literal("suciedad")
 						.then(Commands.argument("valor", IntegerArgumentType.integer(0, BathData.MAX_SUCIEDAD))
 								.executes(BathCommands::setSuciedad)))
@@ -45,7 +48,29 @@ public final class BathCommands {
 								.executes(BathCommands::setConfianza)))
 				.then(Commands.literal("Animation")
 						.then(Commands.argument("animaciones", StringArgumentType.greedyString())
-								.executes(BathCommands::playAnimation)));
+								.executes(BathCommands::playAnimation)))
+				.then(Commands.literal("problema")
+						.then(Commands.literal("envenenamiento")
+								.executes(ctx -> applyProblem(ctx, Statuses.POISON, "envenenamiento")))
+						.then(Commands.literal("paralisis")
+								.executes(ctx -> applyProblem(ctx, Statuses.PARALYSIS, "paralisis")))
+						.then(Commands.literal("dormido")
+								.executes(ctx -> applyProblem(ctx, Statuses.SLEEP, "dormido"))));
+	}
+
+	private static int applyProblem(CommandContext<CommandSourceStack> context, PersistentStatus status, String key) {
+		PokemonEntity target = findLookedPokemon(context.getSource());
+		if (target == null) {
+			context.getSource().sendFailure(Component.translatable("message.cobbledomestics.bath.no_target"));
+			return 0;
+		}
+		Pokemon pokemon = target.getPokemon();
+		pokemon.applyStatus(status);
+		context.getSource().sendSuccess(() -> Component.translatable(
+				"message.cobbledomestics.problema.applied",
+				pokemon.getDisplayName(true),
+				Component.translatable("message.cobbledomestics.problema." + key)), true);
+		return 1;
 	}
 
 	private static int playAnimation(CommandContext<CommandSourceStack> context) {

@@ -61,7 +61,7 @@ public final class HabaHandler {
 		int max = pokemon.getMaxFullness();
 
 		if (current + cost > max) {
-			player.displayClientMessage(Component.translatable("message.cobbledomestics.haba.full", pokemon.getDisplayName(true)), true);
+			player.displayClientMessage(Component.translatable("message.cobbledomestics.haba.full", pokemon.getDisplayName(true)), false);
 			playFail(pokemonEntity);
 			return InteractionResult.FAIL;
 		}
@@ -89,11 +89,11 @@ public final class HabaHandler {
 			player.displayClientMessage(Component.translatable(
 					"message.cobbledomestics.haba.fed_wild",
 					pokemon.getDisplayName(true),
-					confianza), true);
+					confianza), false);
 		} else {
 			player.displayClientMessage(Component.translatable(
 					"message.cobbledomestics.haba.fed_owned",
-					pokemon.getDisplayName(true)), true);
+					pokemon.getDisplayName(true)), false);
 		}
 
 		playSuccess(pokemonEntity);
