@@ -1,0 +1,77 @@
+{
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "particle": "cobbledomestics:block/soap_block",
+    "soap": "cobbledomestics:block/soap_block"
+  },
+  "elements": [
+    {
+      "from": [
+        8.5,
+        0,
+        3
+      ],
+      "to": [
+        13.5,
+        4,
+        7
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            4.44444,
+            2.22222,
+            8,
+            4
+          ],
+          "texture": "#soap"
+        },
+        "east": {
+          "uv": [
+            0,
+            2.22222,
+            4.44444,
+            4
+          ],
+          "texture": "#soap"
+        },
+        "south": {
+          "uv": [
+            12.44444,
+            2.22222,
+            16,
+            4
+          ],
+          "texture": "#soap"
+        },
+        "west": {
+          "uv": [
+            8,
+            2.22222,
+            12.44444,
+            4
+          ],
+          "texture": "#soap"
+        },
+        "up": {
+          "uv": [
+            8,
+            2.22222,
+            4.44444,
+            0
+          ],
+          "texture": "#soap"
+        },
+        "down": {
+          "uv": [
+            11.55556,
+            0,
+            8,
+            2.22222
+          ],
+          "texture": "#soap"
+        }
+      }
+    }
+  ]
+}

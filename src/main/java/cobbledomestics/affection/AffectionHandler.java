@@ -64,16 +64,16 @@ public final class AffectionHandler {
 			hintCooldown = HINT_THROTTLE_TICKS;
 		}
 
-		if (!AffectionData.matchesGustoSpeed(speed, required)) {
-			SESSIONS.put(player.getUUID(), new RubSession(pokemonEntityId, 0, 0, noteCooldown, hintCooldown));
-			return;
-		}
-
+		boolean matching = AffectionData.matchesGustoSpeed(speed, required);
 		int idealTicks = session.idealTicks() + 1;
 		int progress = session.progress();
 		if (idealTicks >= AffectionData.RUB_PROGRESS_INTERVAL_TICKS) {
 			idealTicks = 0;
-			progress = Math.min(AffectionData.RUB_PROGRESS_MAX, progress + 1);
+			// Idle cursor (speed 0) must not advance caricia progress.
+			if (speed > 0) {
+				int gain = matching ? AffectionData.RUB_PROGRESS_MATCH : AffectionData.RUB_PROGRESS_MISMATCH;
+				progress = Math.min(AffectionData.RUB_PROGRESS_MAX, progress + gain);
+			}
 		}
 
 		if (progress < AffectionData.RUB_PROGRESS_MAX) {
@@ -81,16 +81,16 @@ public final class AffectionHandler {
 			return;
 		}
 
-		if (AffectionData.getHumor(pokemon) < AffectionData.RUB_HUMOR_COST) {
+		if (AffectionData.getHumor(pokemon) >= AffectionData.MAX_HUMOR) {
 			if (noteCooldown <= 0) {
-				playLowHumor(pokemonEntity);
+				playFullHumor(pokemonEntity, pokemon);
 				noteCooldown = NOTE_THROTTLE_TICKS;
 			}
 			SESSIONS.put(player.getUUID(), new RubSession(pokemonEntityId, 0, 0, noteCooldown, hintCooldown));
 			return;
 		}
 
-		if (!AffectionData.trySpendHumor(pokemon, AffectionData.RUB_HUMOR_COST)) {
+		if (!AffectionData.tryAddHumor(pokemon, AffectionData.RUB_HUMOR_GAIN)) {
 			SESSIONS.put(player.getUUID(), new RubSession(pokemonEntityId, 0, 0, noteCooldown, hintCooldown));
 			return;
 		}
@@ -112,6 +112,11 @@ public final class AffectionHandler {
 			return;
 		}
 		clearSession(player);
+		Pokemon pokeMon = pokemonEntity.getPokemon();
+		var st = pokeMon.getStatus();
+		if (st != null && st.getStatus() == com.cobblemon.mod.common.api.pokemon.status.Statuses.SLEEP) {
+			pokeMon.setStatus(null);
+		}
 		InteractionAnimations.playOnPokemon(pokemonEntity, "cry");
 		if (pokemonEntity.level() instanceof ServerLevel serverLevel) {
 			serverLevel.playSound(null, pokemonEntity.getX(), pokemonEntity.getY(), pokemonEntity.getZ(),
@@ -157,23 +162,32 @@ public final class AffectionHandler {
 		InteractionAnimations.playOnPokemon(entity, "cry");
 	}
 
-	private static void playLowHumor(PokemonEntity entity) {
+	private static void playFullHumor(PokemonEntity entity, Pokemon pokemon) {
 		if (entity.level() instanceof ServerLevel serverLevel) {
-			serverLevel.sendParticles(CobbleDomesticsModParticleTypes.NOTA.get(), entity.getX(), entity.getY() + entity.getBbHeight() * 0.5, entity.getZ(), 6, 0.35, 0.25, 0.35, 0.0);
+			serverLevel.sendParticles(
+					CobbleDomesticsModParticleTypes.forPokemon(pokemon),
+					entity.getX(),
+					entity.getY() + entity.getBbHeight() * 0.5,
+					entity.getZ(),
+					6,
+					0.35,
+					0.25,
+					0.35,
+					0.0);
 			serverLevel.playSound(null, entity.getX(), entity.getY(), entity.getZ(), CobbleDomesticsModSounds.MASSAGE.get(), SoundSource.NEUTRAL, 0.7F, 1.0F);
 		}
 	}
 
 	@SubscribeEvent
 	public static void onServerTick(ServerTickEvent.Post event) {
-		if (event.getServer().getTickCount() % AffectionData.HUMOR_REGEN_INTERVAL != 0) {
+		if (event.getServer().getTickCount() % AffectionData.HUMOR_DECAY_INTERVAL != 0) {
 			return;
 		}
 		for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
 			var party = PlayerExtensionsKt.party(player);
 			for (Pokemon pokemon : party) {
 				if (pokemon != null) {
-					AffectionData.regenHumor(pokemon);
+					AffectionData.decayHumor(pokemon);
 				}
 			}
 		}
@@ -182,7 +196,7 @@ public final class AffectionHandler {
 				if (entity instanceof PokemonEntity pokemonEntity) {
 					Pokemon pokemon = pokemonEntity.getPokemon();
 					if (AffectionData.isWild(pokemon)) {
-						AffectionData.regenHumor(pokemon);
+						AffectionData.decayHumor(pokemon);
 					}
 				}
 			}

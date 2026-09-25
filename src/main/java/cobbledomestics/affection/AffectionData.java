@@ -12,25 +12,31 @@ import net.minecraft.util.RandomSource;
  */
 public final class AffectionData {
 	public static final int MAX_HUMOR = 10;
-	public static final int DEFAULT_HUMOR = 10;
+	public static final int DEFAULT_HUMOR = 0;
 	public static final int DEFAULT_CONFIANZA = 0;
-	public static final int RUB_HUMOR_COST = 2;
+	/** Humor gained per successful rub (fills toward {@link #MAX_HUMOR}). */
+	public static final int RUB_HUMOR_GAIN = 2;
 	public static final int RUB_FRIENDSHIP_REWARD = 5;
 	public static final int RUB_CONFIANZA_REWARD = 3;
-	/** Progress 0–10; +1 every {@link #RUB_PROGRESS_INTERVAL_TICKS} of ideal speed. */
-	public static final int RUB_PROGRESS_MAX = 10;
-	/** World ticks of matching speed between progress points (3 ticks ≈ 0.15s). */
-	public static final int RUB_PROGRESS_INTERVAL_TICKS = 3;
+	/** Progress 0–15; gains points every {@link #RUB_PROGRESS_INTERVAL_TICKS} while rubbing. */
+	public static final int RUB_PROGRESS_MAX = 15;
+	/** World ticks between progress gains (5 ticks ≈ 0.25s). */
+	public static final int RUB_PROGRESS_INTERVAL_TICKS = 10;
+	/** Points added per interval when rub speed matches the active gusto. */
+	public static final int RUB_PROGRESS_MATCH = 3;
+	/** Points added per interval when rub speed is outside gusto tolerance. */
+	public static final int RUB_PROGRESS_MISMATCH = 1;
 	public static final int RUB_SPEED_MIN = 0;
 	public static final int RUB_SPEED_MAX = 5;
 	/**
-	 * Allowed |speed - gusto| for a tick to count toward success.
+	 * Allowed |speed - gusto| for a tick to count as matching rhythm.
 	 * Wide on purpose: mouse speed is noisy in immersive free-cursor mode.
 	 */
-	public static final int RUB_SPEED_TOLERANCE = 2;
+	public static final int RUB_SPEED_TOLERANCE = 3;
 	public static final int GUSTO_MIN = 1;
 	public static final int GUSTO_MAX = 5;
-	public static final int HUMOR_REGEN_INTERVAL = 1200;
+	/** World ticks between humor decay (−1). */
+	public static final int HUMOR_DECAY_INTERVAL = 1200;
 
 	private static final String ROOT = "cobbledomestics";
 	private static final String HUMOR = "humor";
@@ -74,19 +80,23 @@ public final class AffectionData {
 		tag(pokemon).putInt(HUMOR, clamp(value, 0, MAX_HUMOR));
 	}
 
-	public static boolean trySpendHumor(Pokemon pokemon, int cost) {
+	/**
+	 * Adds humor toward {@link #MAX_HUMOR}. Returns false if already full.
+	 */
+	public static boolean tryAddHumor(Pokemon pokemon, int amount) {
 		int current = getHumor(pokemon);
-		if (current < cost) {
+		if (current >= MAX_HUMOR) {
 			return false;
 		}
-		setHumor(pokemon, current - cost);
+		setHumor(pokemon, current + Math.max(0, amount));
 		return true;
 	}
 
-	public static void regenHumor(Pokemon pokemon) {
+	/** Decays humor by 1 when above 0. */
+	public static void decayHumor(Pokemon pokemon) {
 		int current = getHumor(pokemon);
-		if (current < MAX_HUMOR) {
-			setHumor(pokemon, current + 1);
+		if (current > 0) {
+			setHumor(pokemon, current - 1);
 		}
 	}
 

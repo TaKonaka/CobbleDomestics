@@ -9,8 +9,11 @@ import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.util.PlayerExtensionsKt;
 
 import cobbledomestics.affection.network.JoinOfferPacket;
+import cobbledomestics.init.CobbleDomesticsAdvancements;
+import cobbledomestics.init.CobbleDomesticsModSounds;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -40,7 +43,7 @@ public final class JoinTeamHandler {
 
 		ItemStack ballStack = findPokeBallStack(player);
 		if (ballStack == null || !(ballStack.getItem() instanceof PokeBallItem pokeBallItem)) {
-			player.displayClientMessage(Component.translatable("message.cobbledomestics.join.no_ball"), true);
+			player.displayClientMessage(Component.translatable("message.cobbledomestics.join.no_ball"), false);
 			offerJoin(player, pokemonEntity);
 			return;
 		}
@@ -51,13 +54,15 @@ public final class JoinTeamHandler {
 
 		boolean added = PlayerExtensionsKt.party(player).add(pokemon);
 		if (!added) {
-			player.displayClientMessage(Component.translatable("message.cobbledomestics.join.failed", pokemon.getDisplayName(true)), true);
+			player.displayClientMessage(Component.translatable("message.cobbledomestics.join.failed", pokemon.getDisplayName(true)), false);
 			offerJoin(player, pokemonEntity);
 			return;
 		}
 
 		ballStack.consume(1, player);
 		pokemonEntity.discard();
+		player.level().playSound(null, player.blockPosition(), CobbleDomesticsModSounds.TEAM_JOIN.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+		CobbleDomesticsAdvancements.award(player, CobbleDomesticsAdvancements.NEW_PARTNER);
 	}
 
 	public static void reject(ServerPlayer player, UUID pokemonEntityId) {

@@ -13,21 +13,30 @@ import cobbledomestics.affection.RubHint;
 import cobbledomestics.affection.network.RubEndPacket;
 import cobbledomestics.affection.network.RubPokePacket;
 import cobbledomestics.affection.network.RubTickPacket;
+import cobbledomestics.bath.BathItems;
+import cobbledomestics.bath.network.BathRinsePacket;
+import cobbledomestics.bath.network.BathScrubEndPacket;
+import cobbledomestics.bath.network.BathScrubTickPacket;
+import cobbledomestics.init.CobbleDomesticsModSounds;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Immersive petting: free mouse, camera locked on a Pokémon, LMB to rub on hitbox.
+ * Unified immersive care: free mouse, camera locked on a Pokémon, hotbar usable.
+ * Empty hand → mimos; soap/towel/pipette → scrub; water bucket → rinse (RMB).
  */
 public final class ImmersiveInteractScreen extends Screen {
 	private static final ResourceLocation HAND = ResourceLocation.fromNamespaceAndPath(CobbleDomesticsMod.MODID, "textures/gui/interact/hand.png");
@@ -35,6 +44,11 @@ public final class ImmersiveInteractScreen extends Screen {
 	private static final ResourceLocation HAND_BLUE = ResourceLocation.fromNamespaceAndPath(CobbleDomesticsMod.MODID, "textures/gui/interact/hand_blue.png");
 	private static final ResourceLocation HAND_GREEN = ResourceLocation.fromNamespaceAndPath(CobbleDomesticsMod.MODID, "textures/gui/interact/hand_green.png");
 	private static final ResourceLocation HAND_ATTACK = ResourceLocation.fromNamespaceAndPath(CobbleDomesticsMod.MODID, "textures/gui/interact/hand_attack.png");
+	private static final ResourceLocation TOWEL_CURSOR = ResourceLocation.fromNamespaceAndPath(CobbleDomesticsMod.MODID, "textures/item/towel.png");
+	private static final ResourceLocation TOWEL_EXTEND = ResourceLocation.fromNamespaceAndPath(CobbleDomesticsMod.MODID, "textures/item/extend.png");
+
+	private static final ResourceLocation HOTBAR = ResourceLocation.withDefaultNamespace("hud/hotbar");
+	private static final ResourceLocation HOTBAR_SELECTION = ResourceLocation.withDefaultNamespace("hud/hotbar_selection");
 
 	private static final double MAX_DISTANCE = 2.0;
 	private static final float CAMERA_LERP = 0.35F;
@@ -47,10 +61,13 @@ public final class ImmersiveInteractScreen extends Screen {
 	private static final long POKE_WINDOW_MS = 400L;
 	private static final int POKE_COUNT = 3;
 	private static final int HAND_SIZE = 24;
+	private static final int TOWEL_CURSOR_SIZE = 16;
+	private static final float MOVE_THRESHOLD = 0.35F;
 
 	private final UUID pokemonEntityId;
 
 	private boolean rubbing;
+	private boolean scrubbing;
 	private float smoothedMouseSpeed;
 	private double lastMouseX = Double.NaN;
 	private double lastMouseY = Double.NaN;
@@ -58,6 +75,9 @@ public final class ImmersiveInteractScreen extends Screen {
 	private int attackPauseTicks;
 	private final long[] pokeTimes = new long[POKE_COUNT];
 	private int pokeIndex;
+	private boolean movedThisTick;
+	private ImmersiveScrubSound scrubSound;
+	private ImmersiveRubSound rubSound;
 
 	public ImmersiveInteractScreen(UUID pokemonEntityId) {
 		super(Component.empty());
@@ -73,8 +93,16 @@ public final class ImmersiveInteractScreen extends Screen {
 	}
 
 	public void applyRubHint(RubHint hint) {
-		if (hint != null) {
-			this.rubHint = hint;
+		if (hint == null) {
+			return;
+		}
+		boolean wasCorrect = ImmersiveRubSound.isCorrectHint(this.rubHint);
+		this.rubHint = hint;
+		if (rubbing) {
+			boolean nowCorrect = ImmersiveRubSound.isCorrectHint(hint);
+			if (rubSound == null || wasCorrect != nowCorrect) {
+				startRubSound(nowCorrect);
+			}
 		}
 	}
 
@@ -94,15 +122,17 @@ public final class ImmersiveInteractScreen extends Screen {
 		if (mc.getWindow() != null) {
 			GLFW.glfwSetInputMode(mc.getWindow().getWindow(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
 		}
+		mc.getSoundManager().play(SimpleSoundInstance.forUI(CobbleDomesticsModSounds.RELAX_ENTER.get(), 1.0F));
 	}
 
 	@Override
 	public void removed() {
-		stopRubbing(true);
+		stopAllActions(true);
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.getWindow() != null) {
 			GLFW.glfwSetInputMode(mc.getWindow().getWindow(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
 		}
+		mc.getSoundManager().play(SimpleSoundInstance.forUI(CobbleDomesticsModSounds.RELAX_ENTER.get(), 1.0F));
 		AffectionClient.onImmersiveClosed();
 	}
 
@@ -126,36 +156,54 @@ public final class ImmersiveInteractScreen extends Screen {
 		double my = currentGuiMouseY(mc);
 		boolean over = isMouseOverHitbox(mc, pokemon, mx, my);
 
+		ItemStack held = player.getMainHandItem();
+		syncModeToHeldItem(held);
+
 		if (rubbing && !over) {
 			stopRubbing(true);
-			return;
+		}
+		if (scrubbing && !over) {
+			stopScrubbing(true);
 		}
 
 		// Poll action key every tick (UNIVERSAL context) so remapped keys exit reliably.
 		if (CobbleDomesticsKeyMappings.RUB.consumeClick()) {
 			AffectionClient.consumeRubToggle();
-			if (rubbing) {
-				stopRubbing(true);
+			if (rubbing || scrubbing) {
+				stopAllActions(true);
 			} else {
 				onClose();
 				return;
 			}
 		}
 
-		if (rubbing && attackPauseTicks <= 0) {
-			// Sample mouse delta every tick — don't rely only on drag events.
+		if (rubbing && attackPauseTicks <= 0 && over) {
 			updateMouseSpeed(mx, my);
 			int speed = mapToRubSpeed(smoothedMouseSpeed);
 			PacketDistributor.sendToServer(new RubTickPacket(pokemonEntityId, speed));
+		} else if (scrubbing && over) {
+			updateMouseMotion(mx, my);
+			if (BathItems.isScrubTool(held) && movedThisTick) {
+				int speed = mapToScrubSpeed(smoothedMouseSpeed);
+				PacketDistributor.sendToServer(new BathScrubTickPacket(pokemonEntityId, speed));
+			}
+		} else if (scrubbing || rubbing) {
+			smoothedMouseSpeed = Mth.lerp(SPEED_SMOOTHING, smoothedMouseSpeed, 0.0F);
 		}
+
+		movedThisTick = false;
 	}
 
 	@Override
 	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-		ResourceLocation hand = currentHandTexture();
-		int x = mouseX - HAND_SIZE / 2;
-		int y = mouseY - HAND_SIZE / 2;
-		graphics.blit(hand, x, y, 0, 0, HAND_SIZE, HAND_SIZE, HAND_SIZE, HAND_SIZE);
+		Minecraft mc = Minecraft.getInstance();
+		LocalPlayer player = mc.player;
+		if (player == null) {
+			return;
+		}
+
+		renderHotbar(graphics, player);
+		renderCursor(graphics, player, mouseX, mouseY);
 	}
 
 	@Override
@@ -165,52 +213,72 @@ public final class ImmersiveInteractScreen extends Screen {
 
 	@Override
 	public boolean mouseClicked(double mouseX, double mouseY, int button) {
-		// Action key remapped to a mouse button.
 		if (CobbleDomesticsKeyMappings.RUB.matchesMouse(button)) {
 			AffectionClient.consumeRubToggle();
-			if (rubbing) {
-				stopRubbing(true);
+			if (rubbing || scrubbing) {
+				stopAllActions(true);
 			} else {
 				onClose();
 			}
 			return true;
 		}
 
-		if (button != 0) {
-			return super.mouseClicked(mouseX, mouseY, button);
-		}
-		if (attackPauseTicks > 0) {
-			return true;
-		}
-
 		Minecraft mc = Minecraft.getInstance();
+		LocalPlayer player = mc.player;
 		PokemonEntity pokemon = findPokemon(mc);
 		boolean over = pokemon != null && isMouseOverHitbox(mc, pokemon, mouseX, mouseY);
-		if (!over) {
+		if (player == null || !over) {
 			return true;
 		}
 
-		recordPoke();
-		if (isTriplePoke()) {
-			PacketDistributor.sendToServer(new RubPokePacket(pokemonEntityId));
-			beginAttackPause();
+		ItemStack held = player.getMainHandItem();
+
+		if (button == 0) {
+			if (held.isEmpty()) {
+				if (attackPauseTicks > 0) {
+					return true;
+				}
+				recordPoke();
+				if (isTriplePoke()) {
+					PacketDistributor.sendToServer(new RubPokePacket(pokemonEntityId));
+					beginAttackPause();
+					return true;
+				}
+				stopScrubbing(true);
+				PacketDistributor.sendToServer(new RubEndPacket());
+				rubbing = true;
+				smoothedMouseSpeed = 0.0F;
+				lastMouseX = mouseX;
+				lastMouseY = mouseY;
+				rubHint = RubHint.OK;
+				startRubSound(true);
+				return true;
+			}
+			if (BathItems.isSoap(held) || BathItems.isTowel(held) || BathItems.isPipeta(held)) {
+				stopRubbing(true);
+				PacketDistributor.sendToServer(new BathScrubEndPacket());
+				scrubbing = true;
+				smoothedMouseSpeed = 0.0F;
+				lastMouseX = mouseX;
+				lastMouseY = mouseY;
+				movedThisTick = false;
+				startScrubSound(held);
+			}
 			return true;
 		}
 
-		// Clear any leftover server progress so the 1–10 counter starts fresh each pet.
-		PacketDistributor.sendToServer(new RubEndPacket());
-		rubbing = true;
-		smoothedMouseSpeed = 0.0F;
-		lastMouseX = mouseX;
-		lastMouseY = mouseY;
-		rubHint = RubHint.OK;
+		if (button == 1 && BathItems.isWaterBucket(held)) {
+			PacketDistributor.sendToServer(new BathRinsePacket(pokemonEntityId));
+			return true;
+		}
+
 		return true;
 	}
 
 	@Override
 	public boolean mouseReleased(double mouseX, double mouseY, int button) {
 		if (button == 0) {
-			stopRubbing(true);
+			stopAllActions(true);
 			return true;
 		}
 		return super.mouseReleased(mouseX, mouseY, button);
@@ -218,9 +286,15 @@ public final class ImmersiveInteractScreen extends Screen {
 
 	@Override
 	public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-		if (button == 0 && rubbing && attackPauseTicks <= 0) {
-			updateMouseSpeed(mouseX, mouseY);
-			return true;
+		if (button == 0 && attackPauseTicks <= 0) {
+			if (rubbing) {
+				updateMouseSpeed(mouseX, mouseY);
+				return true;
+			}
+			if (scrubbing) {
+				updateMouseMotion(mouseX, mouseY);
+				return true;
+			}
 		}
 		return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
 	}
@@ -229,6 +303,8 @@ public final class ImmersiveInteractScreen extends Screen {
 	public void mouseMoved(double mouseX, double mouseY) {
 		if (rubbing && attackPauseTicks <= 0) {
 			updateMouseSpeed(mouseX, mouseY);
+		} else if (scrubbing) {
+			updateMouseMotion(mouseX, mouseY);
 		} else {
 			lastMouseX = mouseX;
 			lastMouseY = mouseY;
@@ -236,17 +312,90 @@ public final class ImmersiveInteractScreen extends Screen {
 	}
 
 	@Override
+	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+		LocalPlayer player = Minecraft.getInstance().player;
+		if (player != null && scrollY != 0.0) {
+			player.getInventory().swapPaint(scrollY);
+			syncModeToHeldItem(player.getMainHandItem());
+			return true;
+		}
+		return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+	}
+
+	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
 		if (CobbleDomesticsKeyMappings.RUB.matches(keyCode, scanCode)) {
 			AffectionClient.consumeRubToggle();
-			if (rubbing) {
-				stopRubbing(true);
+			if (rubbing || scrubbing) {
+				stopAllActions(true);
 				return true;
 			}
 			onClose();
 			return true;
 		}
+
+		Minecraft mc = Minecraft.getInstance();
+		LocalPlayer player = mc.player;
+		if (player != null) {
+			for (int i = 0; i < 9; i++) {
+				if (mc.options.keyHotbarSlots[i].matches(keyCode, scanCode)) {
+					player.getInventory().selected = i;
+					syncModeToHeldItem(player.getMainHandItem());
+					return true;
+				}
+			}
+		}
+
 		return super.keyPressed(keyCode, scanCode, modifiers);
+	}
+
+	private void renderCursor(GuiGraphics graphics, LocalPlayer player, int mouseX, int mouseY) {
+		ItemStack held = player.getMainHandItem();
+		if (held.isEmpty()) {
+			ResourceLocation hand = currentHandTexture();
+			int x = mouseX - HAND_SIZE / 2;
+			int y = mouseY - HAND_SIZE / 2;
+			graphics.blit(hand, x, y, 0, 0, HAND_SIZE, HAND_SIZE, HAND_SIZE, HAND_SIZE);
+			return;
+		}
+		if (BathItems.isTowel(held)) {
+			ResourceLocation towel = scrubbing ? TOWEL_EXTEND : TOWEL_CURSOR;
+			int x = mouseX - TOWEL_CURSOR_SIZE / 2;
+			int y = mouseY - TOWEL_CURSOR_SIZE / 2;
+			graphics.blit(towel, x, y, 0, 0, TOWEL_CURSOR_SIZE, TOWEL_CURSOR_SIZE, TOWEL_CURSOR_SIZE, TOWEL_CURSOR_SIZE);
+			return;
+		}
+		if (BathItems.isSoap(held) || BathItems.isWaterBucket(held) || BathItems.isPipeta(held)) {
+			graphics.renderItem(held, mouseX - 8, mouseY - 8);
+			graphics.renderItemDecorations(Minecraft.getInstance().font, held, mouseX - 8, mouseY - 8);
+		}
+	}
+
+	private void renderHotbar(GuiGraphics graphics, LocalPlayer player) {
+		Inventory inventory = player.getInventory();
+		int left = this.width / 2 - 91;
+		int top = this.height - 22;
+		graphics.blitSprite(HOTBAR, left, top, 182, 22);
+		graphics.blitSprite(HOTBAR_SELECTION, left - 1 + inventory.selected * 20, top - 1, 24, 23);
+		for (int i = 0; i < 9; i++) {
+			int slotX = left + i * 20 + 3;
+			int slotY = top + 3;
+			ItemStack stack = inventory.items.get(i);
+			if (!stack.isEmpty()) {
+				graphics.renderItem(player, stack, slotX, slotY, i);
+				graphics.renderItemDecorations(this.font, stack, slotX, slotY);
+			}
+		}
+	}
+
+	/** Stops scrub/rub when the held item no longer matches the active mode. */
+	private void syncModeToHeldItem(ItemStack held) {
+		if (rubbing && !held.isEmpty()) {
+			stopRubbing(true);
+		}
+		if (scrubbing && !BathItems.isScrubTool(held)) {
+			stopScrubbing(true);
+		}
 	}
 
 	private void updateMouseSpeed(double mouseX, double mouseY) {
@@ -260,6 +409,26 @@ public final class ImmersiveInteractScreen extends Screen {
 		lastMouseY = mouseY;
 	}
 
+	private void updateMouseMotion(double mouseX, double mouseY) {
+		if (!Double.isNaN(lastMouseX)) {
+			double dx = mouseX - lastMouseX;
+			double dy = mouseY - lastMouseY;
+			float delta = (float) Math.sqrt(dx * dx + dy * dy);
+			if (delta >= MOVE_THRESHOLD) {
+				movedThisTick = true;
+			}
+			float speed = delta * SPEED_AMPLIFY;
+			smoothedMouseSpeed = Mth.lerp(SPEED_SMOOTHING, smoothedMouseSpeed, speed);
+		}
+		lastMouseX = mouseX;
+		lastMouseY = mouseY;
+	}
+
+	private void stopAllActions(boolean notifyServer) {
+		stopRubbing(notifyServer);
+		stopScrubbing(notifyServer);
+	}
+
 	private void stopRubbing(boolean notifyServer) {
 		if (rubbing && notifyServer) {
 			PacketDistributor.sendToServer(new RubEndPacket());
@@ -267,6 +436,54 @@ public final class ImmersiveInteractScreen extends Screen {
 		rubbing = false;
 		smoothedMouseSpeed = 0.0F;
 		rubHint = RubHint.OK;
+		stopRubSound();
+	}
+
+	private void startRubSound(boolean correct) {
+		stopRubSound();
+		LocalPlayer player = Minecraft.getInstance().player;
+		if (player == null) {
+			return;
+		}
+		rubSound = new ImmersiveRubSound(player, correct);
+		Minecraft.getInstance().getSoundManager().play(rubSound);
+	}
+
+	private void stopRubSound() {
+		if (rubSound != null) {
+			rubSound.requestStop();
+			rubSound = null;
+		}
+	}
+
+	private void stopScrubbing(boolean notifyServer) {
+		if (scrubbing && notifyServer) {
+			PacketDistributor.sendToServer(new BathScrubEndPacket());
+		}
+		scrubbing = false;
+		smoothedMouseSpeed = 0.0F;
+		movedThisTick = false;
+		stopScrubSound();
+	}
+
+	private void startScrubSound(ItemStack held) {
+		stopScrubSound();
+		LocalPlayer player = Minecraft.getInstance().player;
+		if (player == null) {
+			return;
+		}
+		ImmersiveScrubSound sound = ImmersiveScrubSound.forHeldItem(player, held);
+		if (sound != null) {
+			scrubSound = sound;
+			Minecraft.getInstance().getSoundManager().play(sound);
+		}
+	}
+
+	private void stopScrubSound() {
+		if (scrubSound != null) {
+			scrubSound.requestStop();
+			scrubSound = null;
+		}
 	}
 
 	private ResourceLocation currentHandTexture() {
@@ -418,5 +635,22 @@ public final class ImmersiveInteractScreen extends Screen {
 			return 4;
 		}
 		return AffectionData.RUB_SPEED_MAX;
+	}
+
+	/** Maps smoothed GUI motion to scrub contribution 1–5 (faster = less time to apply). */
+	private static int mapToScrubSpeed(float smoothed) {
+		if (smoothed < 2.2F) {
+			return 1;
+		}
+		if (smoothed < 4.5F) {
+			return 2;
+		}
+		if (smoothed < 7.5F) {
+			return 3;
+		}
+		if (smoothed < 12.0F) {
+			return 4;
+		}
+		return 5;
 	}
 }

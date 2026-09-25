@@ -4,8 +4,10 @@ import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 
 import cobbledomestics.CobbleDomesticsMod;
 import cobbledomestics.affection.RubHint;
+import cobbledomestics.bath.BathItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.neoforged.api.distmarker.Dist;
@@ -15,7 +17,7 @@ import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 /**
- * Toggle immersive petting with the remappable action key when looking at a Pokémon.
+ * Toggle immersive care (mimos / bath) with the remappable action key when looking at a Pokémon.
  */
 @EventBusSubscriber(modid = CobbleDomesticsMod.MODID, value = Dist.CLIENT)
 public final class AffectionClient {
@@ -76,7 +78,7 @@ public final class AffectionClient {
 		}
 
 		if (mc.screen instanceof ImmersiveInteractScreen) {
-			// Screen handles stop-rub / exit via key/mouse; do not reopen here.
+			// Screen handles stop / exit via key/mouse; do not reopen here.
 			return;
 		}
 
@@ -89,7 +91,12 @@ public final class AffectionClient {
 		}
 
 		PokemonEntity target = findLookedPokemon(mc);
-		if (target != null) {
+		if (target == null) {
+			return;
+		}
+
+		ItemStack held = mc.player.getMainHandItem();
+		if (held.isEmpty() || BathItems.isBathInteractItem(held)) {
 			rubKeyWasDown = true;
 			mc.setScreen(new ImmersiveInteractScreen(target.getUUID()));
 		}

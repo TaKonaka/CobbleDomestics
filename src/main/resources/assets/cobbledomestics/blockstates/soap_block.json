@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "soaps=1,waterlogged=false": { "model": "cobbledomestics:block/soap_1" },
+    "soaps=2,waterlogged=false": { "model": "cobbledomestics:block/soap_2" },
+    "soaps=3,waterlogged=false": { "model": "cobbledomestics:block/soap_3" },
+    "soaps=4,waterlogged=false": { "model": "cobbledomestics:block/soap_4" },
+    "soaps=1,waterlogged=true": { "model": "cobbledomestics:block/soap_1" },
+    "soaps=2,waterlogged=true": { "model": "cobbledomestics:block/soap_2" },
+    "soaps=3,waterlogged=true": { "model": "cobbledomestics:block/soap_3" },
+    "soaps=4,waterlogged=true": { "model": "cobbledomestics:block/soap_4" }
+  }
+}

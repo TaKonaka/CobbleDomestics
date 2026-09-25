@@ -8,8 +8,8 @@ import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.particle.TextureSheetParticle;
 import net.minecraft.core.particles.SimpleParticleType;
 
-public class NotaParticle extends TextureSheetParticle {
-	protected NotaParticle(ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
+public class TypeNoteParticle extends TextureSheetParticle {
+	protected TypeNoteParticle(ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
 		super(level, x, y, z, xSpeed, ySpeed, zSpeed);
 		this.setSize(0.15F, 0.15F);
 		this.quadSize = 0.35F + this.random.nextFloat() * 0.15F;
@@ -51,7 +51,7 @@ public class NotaParticle extends TextureSheetParticle {
 
 		@Override
 		public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
-			NotaParticle particle = new NotaParticle(level, x, y, z, xSpeed, ySpeed, zSpeed);
+			TypeNoteParticle particle = new TypeNoteParticle(level, x, y, z, xSpeed, ySpeed, zSpeed);
 			particle.pickSprite(this.sprites);
 			return particle;
 		}
