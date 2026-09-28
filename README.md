@@ -243,7 +243,6 @@ Raíz: `/cobbledomestics`
 
 ```
 /cobbledomestics suciedad <valor:0..5>
-/cobbledomestics estado
 /cobbledomestics HumorReset
 /cobbledomestics ConfianzaSet <valor:0..LvCaptura>
 /cobbledomestics Animation <nombres…>
@@ -252,7 +251,6 @@ Raíz: `/cobbledomestics`
 Target: Pokémon más cercano en un AABB proyectado 8 bloques en la dirección de mirada (`lookAngle * 8`, inflate 1). Si no hay hit, fallback al `PokemonEntity` que el jugador esté montando.
 
 - `suciedad`: `setSuciedad`; si `valor > 0` fuerza `jabonoso=0`, `mojado=0`, estado `SUCIO`; si `0`, `clearBath`.
-- `estado`: `syncState` y reporta `STATE | suciedad | jabonoso | mojado | humor | confianza`.
 - `HumorReset`: pone humor en `DEFAULT_HUMOR` (10).
 - `ConfianzaSet`: solo salvajes; fija confianza en `0..LvCaptura` (el parser acepta un rango amplio y `setConfianza` clampea al umbral del Pokémon).
 
@@ -308,19 +306,27 @@ En el mismo compound `cobbledomestics` del NBT persistente:
 
 #### LvCaptura (umbral de domesticación)
 
-El valor de confianza necesario para que un salvaje ofrezca unirse al equipo es dinámico por Pokémon:
+El valor de confianza necesario para que un salvaje ofrezca unirse al equipo es dinámico por Pokémon y depende de la **dificultad de tameo** del servidor (`config/cobbledomestics-server.toml`, también editable en Lista de mods → CobbleDomestics → Config):
 
 ```
-LvCaptura = (LVPkm × Empacho) / 2
+LvCaptura = round((LVPkm × Empacho) / divisor)
 ```
+
+| Dificultad | Divisor |
+|---|---|
+| Fácil (`EASY`) | 3 |
+| Normal (`NORMAL`, default) | 2 |
+| Difícil (`HARD`) | 1 |
 
 | Variable | Origen |
 |---|---|
 | `LVPkm` | `pokemon.getLevel()` |
 | `Empacho` | `pokemon.getMaxFullness()` (saciedad máxima de Cobblemon) |
-| `LvCaptura` | `max(1, (nivel × maxFullness) / 2)` — división entera |
+| `LvCaptura` | `max(1, round((nivel × maxFullness) / divisor))` |
 
 API: `AffectionData.getLvCaptura(pokemon)`. `getConfianza` / `setConfianza` clampean a ese máximo.
+
+Otras opciones de jugador (cliente): `showGameplayMessages` en `cobbledomestics-client.toml`. La tecla de **modo inmersivo** se remapea en Controles → CobbleDomestics.
 
 Los salvajes **no usan Amistad** de Cobblemon: Caricia/Abrazo/Haba solo suman Confianza. La Amistad aplica a Pokémon capturados (dueño).
 

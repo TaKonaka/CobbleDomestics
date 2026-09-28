@@ -10,6 +10,7 @@ import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import cobbledomestics.CobbleDomesticsMod;
 import cobbledomestics.affection.AffectionData;
 import cobbledomestics.affection.RubHint;
+import cobbledomestics.affection.network.ImmersiveFocusEndPacket;
 import cobbledomestics.affection.network.RubEndPacket;
 import cobbledomestics.affection.network.RubPokePacket;
 import cobbledomestics.affection.network.RubTickPacket;
@@ -128,6 +129,7 @@ public final class ImmersiveInteractScreen extends Screen {
 	@Override
 	public void removed() {
 		stopAllActions(true);
+		PacketDistributor.sendToServer(new ImmersiveFocusEndPacket());
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.getWindow() != null) {
 			GLFW.glfwSetInputMode(mc.getWindow().getWindow(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);

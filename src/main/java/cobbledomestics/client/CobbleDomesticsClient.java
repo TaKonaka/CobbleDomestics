@@ -4,12 +4,24 @@ import cobbledomestics.CobbleDomesticsMod;
 import cobbledomestics.client.particle.SoapBubbleParticle;
 import cobbledomestics.client.particle.StatusStainParticle;
 import cobbledomestics.client.particle.TypeNoteParticle;
+import cobbledomestics.config.CobbleDomesticsConfig;
+import cobbledomestics.config.CobbleDomesticsMessages;
+import cobbledomestics.config.network.ShowMessagesPrefPacket;
 import cobbledomestics.particle.CobbleDomesticsModParticleTypes;
+import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
+import net.neoforged.neoforge.client.gui.ConfigurationScreen;
+import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 @EventBusSubscriber(modid = CobbleDomesticsMod.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class CobbleDomesticsClient {
@@ -47,6 +59,48 @@ public final class CobbleDomesticsClient {
 			cobbledomestics.affection.network.JoinOfferPacket.CLIENT_OPEN = JoinOfferScreen::open;
 			cobbledomestics.affection.network.RubHintPacket.CLIENT_APPLY = AffectionClient::applyRubHint;
 			cobbledomestics.affection.network.RubAttackPacket.CLIENT_APPLY = AffectionClient::beginAttackPause;
+			ModList.get().getModContainerById(CobbleDomesticsMod.MODID).ifPresent(CobbleDomesticsClient::registerConfigScreen);
 		});
+		NeoForge.EVENT_BUS.addListener(CobbleDomesticsClient::onClientLogin);
+		NeoForge.EVENT_BUS.addListener(CobbleDomesticsClient::onClientLogout);
+	}
+
+	@SubscribeEvent
+	public static void onConfigReload(ModConfigEvent.Reloading event) {
+		if (event.getConfig().getModId().equals(CobbleDomesticsMod.MODID)
+				&& event.getConfig().getSpec() == CobbleDomesticsConfig.CLIENT_SPEC) {
+			syncShowMessagesPreference();
+		}
+	}
+
+	@SubscribeEvent
+	public static void onConfigLoad(ModConfigEvent.Loading event) {
+		if (event.getConfig().getModId().equals(CobbleDomesticsMod.MODID)
+				&& event.getConfig().getSpec() == CobbleDomesticsConfig.CLIENT_SPEC) {
+			syncShowMessagesPreference();
+		}
+	}
+
+	private static void registerConfigScreen(ModContainer container) {
+		container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
+	}
+
+	private static void onClientLogin(ClientPlayerNetworkEvent.LoggingIn event) {
+		syncShowMessagesPreference();
+	}
+
+	private static void onClientLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+		if (event.getPlayer() != null) {
+			CobbleDomesticsMessages.clear(event.getPlayer().getUUID());
+		}
+	}
+
+	/** Sends the local client preference to the server when connected. */
+	public static void syncShowMessagesPreference() {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.getConnection() == null) {
+			return;
+		}
+		PacketDistributor.sendToServer(new ShowMessagesPrefPacket(CobbleDomesticsConfig.showGameplayMessages()));
 	}
 }

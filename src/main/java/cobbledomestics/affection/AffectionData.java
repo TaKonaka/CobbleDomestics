@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import com.cobblemon.mod.common.pokemon.Pokemon;
 
+import cobbledomestics.config.CobbleDomesticsConfig;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.RandomSource;
 
@@ -30,9 +31,10 @@ public final class AffectionData {
 	public static final int RUB_SPEED_MAX = 5;
 	/**
 	 * Allowed |speed - gusto| for a tick to count as matching rhythm.
-	 * Wide on purpose: mouse speed is noisy in immersive free-cursor mode.
+	 * Keep tight (1): with scale 1–5, tolerance 3 made barely-moving (speed 1)
+	 * match almost every gusto including fast ones.
 	 */
-	public static final int RUB_SPEED_TOLERANCE = 3;
+	public static final int RUB_SPEED_TOLERANCE = 1;
 	public static final int GUSTO_MIN = 1;
 	public static final int GUSTO_MAX = 5;
 	/** World ticks between humor decay (−1). */
@@ -62,10 +64,12 @@ public final class AffectionData {
 	}
 
 	/**
-	 * Dynamic join threshold: {@code (level × maxFullness) / 2}, minimum 1.
+	 * Dynamic join threshold: {@code round((level × maxFullness) / divisor)}, minimum 1.
+	 * Divisor comes from server tame difficulty (EASY=3, NORMAL=2, HARD=1).
 	 */
 	public static int getLvCaptura(Pokemon pokemon) {
-		return Math.max(1, (pokemon.getLevel() * pokemon.getMaxFullness()) / 2);
+		double divisor = CobbleDomesticsConfig.getTameDivisor();
+		return Math.max(1, (int) Math.round((pokemon.getLevel() * (double) pokemon.getMaxFullness()) / divisor));
 	}
 
 	public static int getHumor(Pokemon pokemon) {
@@ -158,8 +162,14 @@ public final class AffectionData {
 		return clamp(speed, GUSTO_MIN, GUSTO_MAX);
 	}
 
-	/** True when rub speed matches the active gusto within {@link #RUB_SPEED_TOLERANCE}. */
+	/**
+	 * True when rub speed matches the active gusto within {@link #RUB_SPEED_TOLERANCE}.
+	 * Idle (speed 0) never matches — holding still must not count as correct rhythm.
+	 */
 	public static boolean matchesGustoSpeed(int rubSpeed, int requiredGusto) {
+		if (rubSpeed <= AffectionData.RUB_SPEED_MIN) {
+			return false;
+		}
 		return Math.abs(rubSpeed - requiredGusto) <= RUB_SPEED_TOLERANCE;
 	}
 

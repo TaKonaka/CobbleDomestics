@@ -1,6 +1,8 @@
 {
-  "type": "minecraft:crafting_shapeless",
+  "type": "cobbledomestics:compact_crafting",
   "category": "misc",
+  "width": 2,
+  "height": 2,
   "ingredients": [
     { "tag": "minecraft:wool" },
     { "item": "minecraft:iron_nugget" },

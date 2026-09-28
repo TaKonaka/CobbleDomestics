@@ -7,6 +7,7 @@ import cobbledomestics.CobbleDomesticsMod;
 import cobbledomestics.affection.AffectionData;
 import cobbledomestics.affection.JoinTeamHandler;
 import cobbledomestics.animation.InteractionAnimations;
+import cobbledomestics.config.CobbleDomesticsMessages;
 import cobbledomestics.item.HabaItem;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -61,7 +62,7 @@ public final class HabaHandler {
 		int max = pokemon.getMaxFullness();
 
 		if (current + cost > max) {
-			player.displayClientMessage(Component.translatable("message.cobbledomestics.haba.full", pokemon.getDisplayName(true)), false);
+			CobbleDomesticsMessages.tell(player, Component.translatable("message.cobbledomestics.haba.full", pokemon.getDisplayName(true)));
 			playFail(pokemonEntity);
 			return InteractionResult.FAIL;
 		}
@@ -86,14 +87,14 @@ public final class HabaHandler {
 		stack.consume(1, player);
 
 		if (wild) {
-			player.displayClientMessage(Component.translatable(
+			CobbleDomesticsMessages.tell(player, Component.translatable(
 					"message.cobbledomestics.haba.fed_wild",
 					pokemon.getDisplayName(true),
-					confianza), false);
+					confianza));
 		} else {
-			player.displayClientMessage(Component.translatable(
+			CobbleDomesticsMessages.tell(player, Component.translatable(
 					"message.cobbledomestics.haba.fed_owned",
-					pokemon.getDisplayName(true)), false);
+					pokemon.getDisplayName(true)));
 		}
 
 		playSuccess(pokemonEntity);
