@@ -39,8 +39,6 @@ public final class BathCommands {
 				.then(Commands.literal("suciedad")
 						.then(Commands.argument("valor", IntegerArgumentType.integer(0, BathData.MAX_SUCIEDAD))
 								.executes(BathCommands::setSuciedad)))
-				.then(Commands.literal("estado")
-						.executes(BathCommands::showState))
 				.then(Commands.literal("HumorReset")
 						.executes(BathCommands::resetHumor))
 				.then(Commands.literal("ConfianzaSet")
@@ -110,28 +108,6 @@ public final class BathCommands {
 			BathData.clearBath(target.getPokemon());
 		}
 		context.getSource().sendSuccess(() -> Component.translatable("message.cobbledomestics.bath.set_dirt", target.getPokemon().getDisplayName(true), value), true);
-		return 1;
-	}
-
-	private static int showState(CommandContext<CommandSourceStack> context) {
-		PokemonEntity target = findLookedPokemon(context.getSource());
-		if (target == null) {
-			context.getSource().sendFailure(Component.translatable("message.cobbledomestics.bath.no_target"));
-			return 0;
-		}
-		Pokemon pokemon = target.getPokemon();
-		BathData.syncState(pokemon);
-		int humor = AffectionData.getHumor(pokemon);
-		int confianza = AffectionData.getConfianza(pokemon);
-		context.getSource().sendSuccess(() -> Component.translatable(
-				"message.cobbledomestics.bath.status",
-				pokemon.getDisplayName(true),
-				BathData.getState(pokemon).name(),
-				BathData.getSuciedad(pokemon),
-				BathData.getJabonoso(pokemon),
-				BathData.getMojado(pokemon),
-				humor,
-				confianza), false);
 		return 1;
 	}
 

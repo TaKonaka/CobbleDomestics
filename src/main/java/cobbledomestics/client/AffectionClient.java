@@ -4,6 +4,7 @@ import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 
 import cobbledomestics.CobbleDomesticsMod;
 import cobbledomestics.affection.RubHint;
+import cobbledomestics.affection.network.ImmersiveFocusStartPacket;
 import cobbledomestics.bath.BathItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
@@ -15,6 +16,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
  * Toggle immersive care (mimos / bath) with the remappable action key when looking at a Pokémon.
@@ -98,6 +100,7 @@ public final class AffectionClient {
 		ItemStack held = mc.player.getMainHandItem();
 		if (held.isEmpty() || BathItems.isBathInteractItem(held)) {
 			rubKeyWasDown = true;
+			PacketDistributor.sendToServer(new ImmersiveFocusStartPacket(target.getUUID()));
 			mc.setScreen(new ImmersiveInteractScreen(target.getUUID()));
 		}
 	}

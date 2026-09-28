@@ -3,7 +3,7 @@ plugins {
     id 'net.neoforged.moddev' version '2.0.141'
 }
 
-version = '1.0.0'
+version = '1.1.0'
 base.archivesName = "cobbledomestics"
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
@@ -45,6 +45,10 @@ repositories {
         name = "KotlinForForge"
         url = "https://thedarkcolour.github.io/KotlinForForge/"
     }
+    maven {
+        name = "BlameJared"
+        url = "https://maven.blamejared.com/"
+    }
     exclusiveContent {
         forRepository {
             maven {
@@ -63,4 +67,7 @@ dependencies {
     // Using implementation here would load a second copy and crash JarInJar / mixins.
     compileOnly "com.cobblemon:neoforge:1.8.0+1.21.1"
     compileOnly "org.jetbrains.kotlin:kotlin-stdlib:2.1.20"
+    // Optional integrations — put JEI/Jade jars in run/mods to test at runtime.
+    compileOnly "mezz.jei:jei-1.21.1-neoforge:19.57.0.449"
+    compileOnly "maven.modrinth:jade:15.10.6+neoforge"
 }

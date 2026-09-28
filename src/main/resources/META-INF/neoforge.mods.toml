@@ -4,7 +4,7 @@ license="Apache-2.0"
 
 [[mods]]
 modId="cobbledomestics"
-version="1.0.0"
+version="1.1.0"
 displayName="CobbleDomestics"
 authors="Konaka"
 description='''Hygiene, affection, and domestication for Cobblemon.'''
@@ -40,3 +40,17 @@ type="required"
 versionRange="[5.7.0,)"
 ordering="AFTER"
 side="BOTH"
+
+[[dependencies.cobbledomestics]]
+modId="jei"
+type="optional"
+versionRange="[19.57.0,)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.cobbledomestics]]
+modId="jade"
+type="optional"
+versionRange="[15.10.0,)"
+ordering="NONE"
+side="CLIENT"

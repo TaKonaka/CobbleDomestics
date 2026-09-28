@@ -9,6 +9,7 @@ import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.util.PlayerExtensionsKt;
 
 import cobbledomestics.affection.network.JoinOfferPacket;
+import cobbledomestics.config.CobbleDomesticsMessages;
 import cobbledomestics.init.CobbleDomesticsAdvancements;
 import cobbledomestics.init.CobbleDomesticsModSounds;
 import net.minecraft.network.chat.Component;
@@ -43,7 +44,7 @@ public final class JoinTeamHandler {
 
 		ItemStack ballStack = findPokeBallStack(player);
 		if (ballStack == null || !(ballStack.getItem() instanceof PokeBallItem pokeBallItem)) {
-			player.displayClientMessage(Component.translatable("message.cobbledomestics.join.no_ball"), false);
+			CobbleDomesticsMessages.tell(player, Component.translatable("message.cobbledomestics.join.no_ball"));
 			offerJoin(player, pokemonEntity);
 			return;
 		}
@@ -54,7 +55,7 @@ public final class JoinTeamHandler {
 
 		boolean added = PlayerExtensionsKt.party(player).add(pokemon);
 		if (!added) {
-			player.displayClientMessage(Component.translatable("message.cobbledomestics.join.failed", pokemon.getDisplayName(true)), false);
+			CobbleDomesticsMessages.tell(player, Component.translatable("message.cobbledomestics.join.failed", pokemon.getDisplayName(true)));
 			offerJoin(player, pokemonEntity);
 			return;
 		}

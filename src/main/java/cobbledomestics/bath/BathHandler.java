@@ -14,6 +14,7 @@ import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 
 import cobbledomestics.CobbleDomesticsMod;
+import cobbledomestics.config.CobbleDomesticsMessages;
 import cobbledomestics.animation.InteractionAnimations;
 import cobbledomestics.init.CobbleDomesticsAdvancements;
 import cobbledomestics.init.CobbleDomesticsModSounds;
@@ -390,9 +391,7 @@ public final class BathHandler {
 	}
 
 	private static void tell(Player player, Component message) {
-		if (!player.level().isClientSide) {
-			player.displayClientMessage(message, false);
-		}
+		CobbleDomesticsMessages.tell(player, message);
 	}
 
 	private static Component name(Pokemon pokemon) {
